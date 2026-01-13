@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>심하의 노래책</title>
+  <title>심하의노래책</title>
   <style>
     :root{
       /* Sky Mint Kitsch */
@@ -151,7 +151,7 @@
     /* Kitsch clean cards */
     .cards{
       display:grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       gap:14px;
     }
     .card{
@@ -405,7 +405,7 @@
 
       <nav>
         <a href="#guide" class="navlink active" data-page="guide">🧾 이용안내</a>
-        <a href="#songs" class="navlink" data-page="songs">📚 신청가능목록</a>
+        <a href="#songs" class="navlink" data-page="songs">📚 노래목록</a>
         <a href="#mission" class="navlink" data-page="mission">🎯 미션곡</a>
         <!-- 어드민은 숨김 페이지: 로그인 후에만 이동 가능 -->
         <a href="#admin" class="navlink" data-page="admin" id="adminNav" style="display:none;">⚙︎ 어드민</a>
@@ -423,38 +423,57 @@
         <!-- 이용안내 -->
         <section class="page active" id="guide">
           <header>
-            <h1>이용안내</h1>
-            <p>키치 한 스푼, 정리는 깔끔하게. 아래 카드만 보면 끝 🫧</p>
+            <h1>✨ 노래 신청 하는 방법 ✨</h1>
+            <p>설명 모두 읽어주세요💕</p>
           </header>
 
           <div class="cards">
             <article class="card">
               <div class="ribbon">
                 <b>✅ 신청 방법</b>
-                <span class="badge">가수명 + 제목</span>
+                <span class="badge">5,000원</span>
               </div>
               <div class="body">
                 <ul>
-                  <li>신청은 채팅에 <b>가수명 - 노래제목</b>만 적어주세요.</li>
+                  <li>신청은 후원과 함께 <b>가수명 - 노래제목</b>을 적어주세요.</li>
                   <li>목록에 있는 곡 위주로 진행돼요.</li>
-                  <li>대기 순서대로 차례차례 불러요.</li>
+                  <li>신청한 순서대로 차례차례 불러요.</li>
                 </ul>
-                <div class="hint">예시: 아이유 - 밤편지</div>
+                <div class="hint">예시: 심하 - 너에게전해줄래</div>
               </div>
             </article>
 
             <article class="card">
               <div class="ribbon">
-                <b>🫶 같이 보는 룰</b>
+                <b>💖 같이 보는 룰</b>
                 <span class="badge">분위기 보호</span>
               </div>
               <div class="body">
                 <ul>
-                  <li>반복/강요 요청은 흐름상 스킵될 수 있어요.</li>
-                  <li>노래/실력 평가성 채팅은 삼가주세요.</li>
+                  <li>미션곡 과 커버곡은 사전에 저와 이야기 후 신청해주세요.</li>
+                  <li>리스트에 없는 곡 중 알고 있는 곡이 생각보다 많습니다! 없다면 일단 물어봐주세요.</li>
+                  <li>노래를 부를 때 제 스타일대로 부릅니다! 멜로디가 조금 다르더라도 이해해주세요.</li>
                   <li>비난/욕설/분쟁 유도는 제한될 수 있어요.</li>
                 </ul>
                 <div class="hint">방송은 같이 만드는 공기! 뽀송하게 지켜요 🧼</div>
+              </div>
+            </article>
+          
+            <article class="card">
+              <div class="ribbon">
+                <b>📜 노래단가</b>
+                <span class="badge">요모조모</span>
+              </div>
+              <div class="body">
+                <ul>
+                  <li>R심마카세ㅣ2만원ㅣ심하 맘대로 곡 랜덤으로 여러개</li>
+                  <li>즉석1절카피ㅣ3만원ㅣ당일 20분정도 소요 (팝송제외)</li>
+                  <li>팬서비스ㅣ5만원ㅣ좀더!(시그풍11개)</li>
+                  <li>완곡미션곡ㅣ7만원ㅣ최소 1주일소요 (팝송은협의)</li>
+                  <li>유투브커버곡ㅣ15만원ㅣ최소 2-3주일소요 (녹음,믹마,촬영)</li>
+                  <li>공연셋리부르기ㅣ20만원ㅣ공연에서 불렀던 노래 전곡 부르기</li>
+                </ul>
+                <div class="hint">신청곡 랜덤룰렛도 있습니다! (4,900원)</div>
               </div>
             </article>
           </div>
@@ -464,7 +483,7 @@
         <section class="page" id="songs">
           <header>
             <h1>신청가능목록</h1>
-            <p>검색해서 바로 찾을 수 있게. (가수/제목 아무거나 입력해도 필터링돼요)</p>
+            <p>가수/제목 아무거나 검색하세요.</p>
           </header>
 
           <div class="panel">
@@ -478,7 +497,7 @@
             <div class="list" id="songList"></div>
 
             <p class="tiny" style="margin-top:12px;">
-              ℹ️ 기본 곡 목록은 레포의 songs.json(공개목록)에서 불러옵니다. 어드민에서 편집하는 동안은 임시로 브라우저(localStorage)에 저장되고, ⬇️ 내보내기한 songs.json을 레포에 올리면 모두에게 반영돼요.
+              ❣ 목록에 없는 곡은 채팅으로 물어봐주세요 ❣
             </p>
           </div>
         </section>
@@ -487,23 +506,22 @@
         <section class="page" id="mission">
           <header>
             <h1>미션곡</h1>
-            <p>미션은 “룰이 간단할수록” 진행이 부드러워요. 아래는 예시 템플릿!</p>
+            <p>미션곡은 7만원 입니다</p>
           </header>
 
           <div class="panel">
             <div class="cards" style="grid-template-columns:1fr;">
               <article class="card">
                 <div class="ribbon">
-                  <b>🎯 미션 제출</b>
+                  <b>🎯 미션중인 노래</b>
                   <span class="badge">예시</span>
                 </div>
                 <div class="body">
                   <ul>
-                    <li>채팅에 <b>미션: 가수명 - 노래제목</b>으로 남겨주세요.</li>
-                    <li>방송 흐름/컨디션에 따라 스킵될 수 있어요.</li>
-                    <li>미션 성공 보상은 방송 공지에 따라 달라요.</li>
+                    <li><b>정가이 - 난제</b> 갬희님 신청 ~ 1/15</li>
+                    <li><b>김연지 - Whisky on the Rock</b> 윈드님 신청 ~ 1/15</li>
                   </ul>
-                  <div class="hint">원하면 미션곡도 어드민에서 따로 관리하는 버전으로 확장 가능!</div>
+                  <div class="hint">새로운 노래가 듣고 싶다면 언제든 미션!!</div>
                 </div>
               </article>
             </div>
@@ -921,4 +939,5 @@
   </script>
 </body>
 </html>
+
 
