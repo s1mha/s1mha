@@ -558,42 +558,45 @@
     $("cancelBtn").addEventListener("click", closeModal);
     modalBg.addEventListener("click",(e)=>{ if(e.target===modalBg) closeModal(); });
 
-    // ✅ 토큰 검증 로그인: auth가 ok:true일 때만 어드민 OK
-    $("loginBtn").addEventListener("click", async ()=>{
-      const p=$("pass").value.trim();
-      if(!p){
-        warn.style.display="block";
-        return;
-      }
+$("loginBtn").addEventListener("click", async ()=>{
+  const p = $("pass").value.trim();
+  if(!p){ warn.style.display="block"; return; }
 
-      $("loginBtn").disabled=true;
-      warn.style.display="none";
+  $("loginBtn").disabled = true;
+  warn.style.display = "none";
 
-      // 일단 초기화
-      sessionStorage.removeItem(AUTH_OK_KEY);
-      setToken(""); // 토큰/OK 모두 제거
+  // 초기화
+  sessionStorage.removeItem(AUTH_OK_KEY);
+  setToken("");
 
-      try{
-        const data = await api("auth", { token:p });
+  try{
+    // ✅ auth는 GET으로 검증 (POST 꼬임 회피)
+    const url = `${BASE_URL}?action=auth&token=${encodeURIComponent(p)}`;
+    const text = await fetch(url, { method:"GET", cache:"no-store" }).then(r => r.text());
 
-        if(data && data.ok){
-          // ✅ 핵심: OK 플래그를 먼저 박고, 토큰 저장 후 UI 갱신
-          sessionStorage.setItem(AUTH_OK_KEY,"1");
-          setToken(p);
-          updateAdminVisibility();
+    let data;
+    try { data = JSON.parse(text); }
+    catch { data = { ok:false, error:"bad_json", raw:text }; }
 
-          closeModal();
-          show("admin");
-        }else{
-          warn.style.display="block";
-        }
-      }catch(err){
-        warn.style.display="block";
-        alert("로그인 확인 실패! (배포/권한/네트워크 확인)");
-      }finally{
-        $("loginBtn").disabled=false;
-      }
-    });
+    if(data && data.ok){
+      sessionStorage.setItem(AUTH_OK_KEY,"1");
+      setToken(p);
+      updateAdminVisibility();
+      closeModal();
+      show("admin");
+    }else{
+      warn.style.display="block";
+      // 디버깅용: 혹시 raw가 HTML이면 여기서 바로 보임
+      console.log("auth failed:", data);
+    }
+  }catch(err){
+    warn.style.display="block";
+    console.log("auth error:", err);
+    alert("로그인 확인 실패! (배포/권한/네트워크 확인)");
+  }finally{
+    $("loginBtn").disabled = false;
+  }
+});
 
     $("pass").addEventListener("keydown",(e)=>{
       if(e.key==="Enter") $("loginBtn").click();
@@ -613,3 +616,4 @@
   </script>
 </body>
 </html>
+
