@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>노래책</title>
+  <title>심하노래책</title>
   <style>
     :root{
       /* Sky Mint Kitsch */
@@ -303,11 +303,6 @@
       border-color: rgba(15,23,42,.06);
       box-shadow: 0 12px 22px rgba(15,23,42,.10);
     }
-    button.danger{
-      background: #fff;
-      border-color: rgba(239,68,68,.35);
-      color: #b91c1c;
-    }
     button:disabled{ opacity:.55; cursor:not-allowed; }
 
     .tiny{
@@ -316,9 +311,7 @@
       line-height:1.6;
     }
 
-    .admin-list .song{
-      background: #fff;
-    }
+    .admin-list .song{ background:#fff; }
     .del{
       font-size:12px;
       padding: 8px 10px;
@@ -571,9 +564,9 @@
 
   <script>
     /* =========================
-       Settings (이미 네 URL 세팅 완료)
+       Settings
     ========================= */
-    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMxEG1SJb3RqD1Cw_vBFzSM9gkvCNll8T8Q-Xt5rbohcpZqKy4a_fkolHjoF7O4f7vEg/exec";
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzxgKQCLuS-XKkDwYjAC6EaWt1bxNUp68RtqRYC_jOH2G_VEHdaQu7TuSYHg_yRfwtohQ/exec";
     const AUTH_SESSION_KEY = "songbook_admin_token_session_v1";
 
     /* =========================
@@ -764,7 +757,7 @@
     $("q")?.addEventListener("input", renderSongs);
 
     /* =========================
-       Admin add (중복 방지)
+       Admin add
     ========================= */
     $("addBtn")?.addEventListener("click", async () => {
       const artist = norm($("artist").value);
@@ -775,7 +768,6 @@
         return;
       }
 
-      // 1차: 프론트 중복 방지
       const k = keyOf(artist, title);
       const has = SONGS.some(s => keyOf(s.artist, s.title) === k);
       if(has){
@@ -785,7 +777,7 @@
 
       $("addBtn").disabled = true;
       try{
-        await addSong(artist, title); // 2차: 서버도 중복 체크
+        await addSong(artist, title);
         $("artist").value = "";
         $("title").value = "";
         $("artist").focus();
@@ -835,14 +827,31 @@
     $("cancelBtn").addEventListener("click", closeModal);
     modalBg.addEventListener("click", (e) => { if(e.target === modalBg) closeModal(); });
 
-    $("loginBtn").addEventListener("click", () => {
-      const p = $("pass").value;
-      if(p){
-        setToken(p);      // 토큰을 세션에만 저장
-        closeModal();
-        show("admin");
-      }else{
+    // ✅ 토큰 검증 로그인: 맞아야만 어드민 입장
+    $("loginBtn").addEventListener("click", async () => {
+      const p = $("pass").value.trim();
+      if(!p){
         warn.style.display = "block";
+        return;
+      }
+
+      $("loginBtn").disabled = true;
+      warn.style.display = "none";
+
+      try{
+        const data = await api("auth", { token: p });
+        if(data && data.ok){
+          setToken(p);
+          closeModal();
+          show("admin");
+        }else{
+          warn.style.display = "block";
+        }
+      }catch(err){
+        warn.style.display = "block";
+        alert("로그인 확인 실패! (웹앱 URL/배포 권한/네트워크 확인)");
+      }finally{
+        $("loginBtn").disabled = false;
       }
     });
 
@@ -858,6 +867,18 @@
     const initial = (location.hash || "#guide").replace("#","");
     show(["guide","songs","mission","admin"].includes(initial) ? initial : "guide");
     refreshSongs().catch(err => console.warn("Sheet 연결 실패:", err));
+
+    // ✅ 새로고침 시 저장된 토큰이 틀리면 자동 로그아웃
+    async function validateSessionToken(){
+      const t = getToken();
+      if(!t) return;
+
+      const data = await api("auth", { token: t }).catch(() => null);
+      if(!data || !data.ok){
+        setToken("");
+      }
+    }
+    validateSessionToken();
   </script>
 </body>
 </html>
