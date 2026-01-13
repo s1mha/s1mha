@@ -379,7 +379,7 @@
       <div class="brand">
         <div class="logo">♪</div>
         <div class="brand-title">
-          <b>노래책</b>
+          <b>심하 노래책</b>
           <span>Sky Mint Kitsch</span>
         </div>
       </div>
@@ -392,7 +392,7 @@
       </nav>
 
       <div class="sidebar-footer">
-        <span>© 채널명</span>
+        <span>© 심하</span>
         <button class="gear" id="openAdmin" title="어드민">⚙︎</button>
       </div>
     </aside>
@@ -568,6 +568,7 @@
     ========================= */
     const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzxgKQCLuS-XKkDwYjAC6EaWt1bxNUp68RtqRYC_jOH2G_VEHdaQu7TuSYHg_yRfwtohQ/exec";
     const AUTH_SESSION_KEY = "songbook_admin_token_session_v1";
+    const AUTH_OK_KEY = "songbook_admin_ok_v1";
 
     /* =========================
        Helpers
@@ -595,10 +596,12 @@
     function setToken(t){
       if(t) sessionStorage.setItem(AUTH_SESSION_KEY, t);
       else sessionStorage.removeItem(AUTH_SESSION_KEY);
+
+      if(!t) sessionStorage.removeItem(AUTH_OK_KEY);
       updateAdminVisibility();
     }
     function isAuthed(){
-      return !!getToken();
+      return sessionStorage.getItem(AUTH_OK_KEY) === "1";
     }
 
     /* =========================
@@ -635,7 +638,7 @@
     /* =========================
        State
     ========================= */
-    let SONGS = []; // {id, artist, title}
+    let SONGS = [];
 
     /* =========================
        Render
@@ -698,6 +701,7 @@
           }catch(e){
             if(e.message === "unauthorized"){
               alert("권한이 없어요. 다시 로그인해주세요.");
+              sessionStorage.removeItem(AUTH_OK_KEY);
               setToken("");
               show("guide");
               openModal();
@@ -787,6 +791,7 @@
           alert("이미 목록에 있는 곡이에요! (서버 중복 방지)");
         }else if(e.message === "unauthorized"){
           alert("어드민 권한이 없어요. 다시 로그인해주세요.");
+          sessionStorage.removeItem(AUTH_OK_KEY);
           setToken("");
           show("guide");
           openModal();
@@ -799,6 +804,7 @@
     });
 
     $("logoutBtn")?.addEventListener("click", () => {
+      sessionStorage.removeItem(AUTH_OK_KEY);
       setToken("");
       show("guide");
     });
@@ -842,6 +848,7 @@
         const data = await api("auth", { token: p });
         if(data && data.ok){
           setToken(p);
+          sessionStorage.setItem(AUTH_OK_KEY, "1"); // ✅ 검증 완료 표시
           closeModal();
           show("admin");
         }else{
@@ -868,13 +875,14 @@
     show(["guide","songs","mission","admin"].includes(initial) ? initial : "guide");
     refreshSongs().catch(err => console.warn("Sheet 연결 실패:", err));
 
-    // ✅ 새로고침 시 저장된 토큰이 틀리면 자동 로그아웃
+    // ✅ 새로고침 시 저장된 토큰이 틀리면 자동 로그아웃 + OK 플래그 제거
     async function validateSessionToken(){
       const t = getToken();
       if(!t) return;
 
       const data = await api("auth", { token: t }).catch(() => null);
       if(!data || !data.ok){
+        sessionStorage.removeItem(AUTH_OK_KEY);
         setToken("");
       }
     }
