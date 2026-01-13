@@ -478,7 +478,7 @@
             <div class="list" id="songList"></div>
 
             <p class="tiny" style="margin-top:12px;">
-              ⚠️ 이 페이지의 곡 목록은 이 브라우저에 저장됩니다(localStorage). 여러 기기/여러 PC에서 공유하려면 서버(예: Firebase/Supabase)가 필요해요.
+              ℹ️ 기본 곡 목록은 레포의 songs.json(공개목록)에서 불러옵니다. 어드민에서 편집하는 동안은 임시로 브라우저(localStorage)에 저장되고, ⬇️ 내보내기한 songs.json을 레포에 올리면 모두에게 반영돼요.
             </p>
           </div>
         </section>
@@ -633,7 +633,8 @@
         const data = await r.json();
         sharedSongs = Array.isArray(data) ? data : [];
         sharedLoaded = true;
-      }catch{
+      }catch(e){
+        console.error("loadSharedSongs failed:", e);
         sharedSongs = [];
         sharedLoaded = false;
       }finally{
@@ -875,7 +876,11 @@
       alert("공개목록 새로고침 요청! (방금 올라간 songs.json이면 곧 반영돼요)");
     });
 
-    /* =========================
+    
+    // ✅ 초기 로드: 공개목록(songs.json)을 자동으로 불러옵니다
+    loadSharedSongs();
+
+/* =========================
        Modal login
     ========================= */
     const modalBg = $("modalBg");
