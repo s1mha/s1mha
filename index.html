@@ -286,27 +286,22 @@
           <button id="cancelBtn">취소</button>
         </div>
         <div class="warn" id="warn">토큰이 틀렸어요.</div>
-        <p class="tiny" style="margin-top:10px;">* 이 방식은 “간단 접근용”이에요.</p>
+        <p class="tiny" style="margin-top:10px;">* 토큰이 맞아야 어드민 진입 가능 (틀리면 절대 입장 불가)</p>
       </div>
     </div>
   </div>
 
   <script>
-    /* =========================
-       Settings
-       - Apps Script 웹앱(/exec)에서 이 HTML이 열리는 구조라면,
-         BASE_URL은 현재 페이지(/exec)로 맞추는 게 정답!
-    ========================= */
+    // ✅ 같은 웹앱(/exec)으로 API 호출
     const BASE_URL = (() => {
       const u = new URL(location.href);
       u.search = "";
       u.hash = "";
-      return u.toString(); // .../exec
+      return u.toString();
     })();
 
     const AUTH_SESSION_KEY = "songbook_admin_token_session_v1";
-    const AUTH_OK_KEY      = "songbook_admin_ok_v1";
-
+    const AUTH_OK_KEY = "songbook_admin_ok_v1";
     const $ = (id) => document.getElementById(id);
 
     function norm(s){ return (s||"").toString().trim().replace(/\s+/g," "); }
@@ -318,32 +313,31 @@
     }
 
     function getToken(){ return sessionStorage.getItem(AUTH_SESSION_KEY) || ""; }
-
-    // ✅ 토큰 저장/삭제만 담당 (OK 플래그는 별도로 관리)
     function setToken(t){
       if(t) sessionStorage.setItem(AUTH_SESSION_KEY, t);
       else sessionStorage.removeItem(AUTH_SESSION_KEY);
-
-      if(!t) sessionStorage.removeItem(AUTH_OK_KEY); // 토큰 없으면 OK도 제거
+      if(!t) sessionStorage.removeItem(AUTH_OK_KEY);
       updateAdminVisibility();
     }
-
     function isAuthed(){
-      // ✅ "검증 성공" + "토큰 존재" 둘 다 만족해야 어드민 인정
       return sessionStorage.getItem(AUTH_OK_KEY) === "1" && !!getToken();
     }
 
-    /* =========================
-       API
-       - Apps Script는 JSON Content-Type에서 가끔 꼬일 때가 있어서
-         text/plain으로 보내면 더 안정적이야.
-    ========================= */
-    async function api(action, payload={}){
+    // ✅ GET(JSON) : list/auth 안정형
+    async function apiGet(action, params={}){
+      const qs = new URLSearchParams({ action, ...params, _: Date.now() }).toString();
+      const url = `${BASE_URL}?${qs}`;
+      const text = await fetch(url, { method:"GET", cache:"no-store" }).then(r => r.text());
+      try { return JSON.parse(text); }
+      catch { return { ok:false, error:"bad_json_response", raw:text }; }
+    }
+
+    // ✅ POST(JSON) : add/delete
+    async function apiPost(action, payload={}){
       const res = await fetch(BASE_URL, {
         method: "POST",
         headers: { "Content-Type":"text/plain;charset=utf-8" },
-        body: JSON.stringify({ action, ...payload }),
-        cache: "no-store"
+        body: JSON.stringify({ action, ...payload })
       });
       const text = await res.text();
       try { return JSON.parse(text); }
@@ -351,17 +345,21 @@
     }
 
     async function listSongs(){
-      const data = await api("list");
+      const data = await apiGet("list");
       if(!data.ok) throw new Error(data.error || "list_failed");
       return data.songs || [];
     }
+    async function authToken(token){
+      const data = await apiGet("auth", { token });
+      return !!(data && data.ok);
+    }
     async function addSong(artist, title){
-      const data = await api("add", { token:getToken(), artist, title });
+      const data = await apiPost("add", { token:getToken(), artist, title });
       if(!data.ok) throw new Error(data.error || "add_failed");
       return data.id;
     }
     async function deleteSong(id){
-      const data = await api("delete", { token:getToken(), id });
+      const data = await apiPost("delete", { token:getToken(), id });
       if(!data.ok) throw new Error(data.error || "delete_failed");
       return true;
     }
@@ -418,11 +416,6 @@
 
       list.querySelectorAll(".del").forEach(btn=>{
         btn.addEventListener("click", async ()=>{
-          if(!isAuthed()){
-            forceLogout("권한이 없어요. 다시 로그인해주세요.");
-            return;
-          }
-
           const id=btn.dataset.id;
           btn.disabled=true;
           try{
@@ -430,7 +423,11 @@
             await refreshSongs();
           }catch(e){
             if(e.message==="unauthorized"){
-              forceLogout("권한이 없어요. 다시 로그인해주세요.");
+              alert("권한이 없어요. 다시 로그인해주세요.");
+              sessionStorage.removeItem(AUTH_OK_KEY);
+              setToken("");
+              show("guide");
+              openModal();
               return;
             }
             alert("삭제 실패: "+e.message);
@@ -447,37 +444,23 @@
       if(isAuthed()) renderAdminList();
     }
 
-    function forceLogout(msg){
-      if(msg) alert(msg);
-      sessionStorage.removeItem(AUTH_OK_KEY);
-      setToken("");
-      show("guide");
-      openModal();
-    }
-
-    /* =========================
-       Router
-    ========================= */
     const links=document.querySelectorAll(".navlink");
     const pages=document.querySelectorAll(".page");
 
     function show(pageId){
-      // ✅ 어드민은 반드시 인증된 상태만
-      if(pageId === "admin" && !isAuthed()){
-        // 해시로 직접 들어와도 막힘
-        pages.forEach(p=>p.classList.toggle("active", p.id==="guide"));
-        links.forEach(a=>a.classList.toggle("active", a.dataset.page==="guide"));
-        history.replaceState(null,"","#guide");
-        openModal();
-        return;
-      }
-
       pages.forEach(p=>p.classList.toggle("active", p.id===pageId));
       links.forEach(a=>a.classList.toggle("active", a.dataset.page===pageId));
       history.replaceState(null,"","#"+pageId);
 
       if(pageId==="songs") refreshSongs().catch(()=>{});
-      if(pageId==="admin") refreshSongs().then(renderAdminList).catch(()=>{});
+      if(pageId==="admin"){
+        if(!isAuthed()){
+          show("guide");
+          openModal();
+          return;
+        }
+        refreshSongs().then(renderAdminList).catch(()=>{});
+      }
     }
 
     links.forEach(a=>{
@@ -485,8 +468,7 @@
         e.preventDefault();
         const target=a.dataset.page;
         if(target==="admin" && !isAuthed()){
-          openModal();
-          return;
+          openModal(); return;
         }
         show(target);
       });
@@ -494,23 +476,14 @@
 
     $("q")?.addEventListener("input", renderSongs);
 
-    /* =========================
-       Admin add
-    ========================= */
     $("addBtn")?.addEventListener("click", async ()=>{
-      if(!isAuthed()){
-        forceLogout("권한이 없어요. 다시 로그인해주세요.");
-        return;
-      }
-
       const artist=norm($("artist").value);
       const title=norm($("title").value);
       if(!artist || !title){ alert("가수명과 노래제목을 모두 입력해주세요!"); return; }
 
       const k=keyOf(artist,title);
       if(SONGS.some(s=>keyOf(s.artist,s.title)===k)){
-        alert("이미 목록에 있는 곡이에요!");
-        return;
+        alert("이미 목록에 있는 곡이에요!"); return;
       }
 
       $("addBtn").disabled=true;
@@ -521,8 +494,12 @@
         await refreshSongs();
       }catch(e){
         if(e.message==="duplicate") alert("이미 목록에 있는 곡이에요!");
-        else if(e.message==="unauthorized") forceLogout("권한이 없어요. 다시 로그인해주세요.");
-        else alert("추가 실패: "+e.message);
+        else if(e.message==="unauthorized"){
+          alert("어드민 권한이 없어요. 다시 로그인해주세요.");
+          sessionStorage.removeItem(AUTH_OK_KEY);
+          setToken("");
+          show("guide"); openModal();
+        }else alert("추가 실패: "+e.message);
       }finally{
         $("addBtn").disabled=false;
       }
@@ -539,12 +516,8 @@
       if(adminNav) adminNav.style.display = isAuthed() ? "" : "none";
     }
 
-    /* =========================
-       Modal login
-    ========================= */
     const modalBg=$("modalBg");
     const warn=$("warn");
-
     function openModal(){
       warn.style.display="none";
       $("pass").value="";
@@ -558,62 +531,64 @@
     $("cancelBtn").addEventListener("click", closeModal);
     modalBg.addEventListener("click",(e)=>{ if(e.target===modalBg) closeModal(); });
 
-$("loginBtn").addEventListener("click", async ()=>{
-  const p = $("pass").value.trim();
-  if(!p){ warn.style.display="block"; return; }
+    // ✅ 토큰 검증: 맞아야만 ok 플래그 세팅 + 어드민 진입
+    $("loginBtn").addEventListener("click", async ()=>{
+      const p=$("pass").value.trim();
+      if(!p){ warn.style.display="block"; return; }
 
-  $("loginBtn").disabled = true;
-  warn.style.display = "none";
+      $("loginBtn").disabled=true;
+      warn.style.display="none";
 
-  // 초기화
-  sessionStorage.removeItem(AUTH_OK_KEY);
-  setToken("");
-
-  try{
-    // ✅ auth는 GET으로 검증 (POST 꼬임 회피)
-    const url = `${BASE_URL}?action=auth&token=${encodeURIComponent(p)}`;
-    const text = await fetch(url, { method:"GET", cache:"no-store" }).then(r => r.text());
-
-    let data;
-    try { data = JSON.parse(text); }
-    catch { data = { ok:false, error:"bad_json", raw:text }; }
-
-    if(data && data.ok){
-      sessionStorage.setItem(AUTH_OK_KEY,"1");
-      setToken(p);
-      updateAdminVisibility();
-      closeModal();
-      show("admin");
-    }else{
-      warn.style.display="block";
-      // 디버깅용: 혹시 raw가 HTML이면 여기서 바로 보임
-      console.log("auth failed:", data);
-    }
-  }catch(err){
-    warn.style.display="block";
-    console.log("auth error:", err);
-    alert("로그인 확인 실패! (배포/권한/네트워크 확인)");
-  }finally{
-    $("loginBtn").disabled = false;
-  }
-});
+      try{
+        const ok = await authToken(p);
+        if(ok){
+          setToken(p);
+          sessionStorage.setItem(AUTH_OK_KEY,"1");
+          updateAdminVisibility();
+          closeModal();
+          show("admin");
+        }else{
+          warn.style.display="block";
+          sessionStorage.removeItem(AUTH_OK_KEY);
+          setToken("");
+        }
+      }catch(err){
+        warn.style.display="block";
+        console.log("auth error:", err);
+        alert("로그인 확인 실패! (배포/권한/네트워크 확인)");
+      }finally{
+        $("loginBtn").disabled=false;
+      }
+    });
 
     $("pass").addEventListener("keydown",(e)=>{
       if(e.key==="Enter") $("loginBtn").click();
       if(e.key==="Escape") closeModal();
     });
 
-    /* =========================
-       Boot
-       - 새로고침해도 OK 플래그가 없으면 어드민 불가
-    ========================= */
+    // ✅ 부팅
     updateAdminVisibility();
-
     const initial=(location.hash||"#guide").replace("#","");
     show(["guide","songs","mission","admin"].includes(initial) ? initial : "guide");
-
     refreshSongs().catch(()=>{});
+
+    // ✅ 새로고침/재접속 시: 토큰이 저장돼있어도 "진짜로 맞는지" 재검증
+    (async function validateOnBoot(){
+      const t = getToken();
+      if(!t) return;
+      const ok = await authToken(t).catch(()=>false);
+      if(ok){
+        sessionStorage.setItem(AUTH_OK_KEY,"1");
+      }else{
+        sessionStorage.removeItem(AUTH_OK_KEY);
+        setToken("");
+      }
+      updateAdminVisibility();
+      if(location.hash === "#admin" && !isAuthed()){
+        show("guide");
+        openModal();
+      }
+    })();
   </script>
 </body>
 </html>
-
