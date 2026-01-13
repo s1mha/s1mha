@@ -1,125 +1,615 @@
-const SHEET_NAME = "songs";
-const SPREADSHEET_ID = "16LzMmx_X99Exy_AmNBFmfduPW1e-dKCm9yzb5LlkJk0";
-const ADMIN_TOKEN = "s1mha0310";
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>심하노래책</title>
+  <style>
+    :root{
+      --bg:#f7fffd; --panel:#fff; --ink:#0f172a; --muted:#64748b;
+      --mint:#71f0da; --sky:#8bd7ff;
+      --radius:18px; --shadow:0 14px 36px rgba(15,23,42,.08);
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",Arial,"Apple SD Gothic Neo",sans-serif;
+      color:var(--ink);
+      background:
+        radial-gradient(900px 520px at 12% 6%, rgba(113,240,218,.35) 0%, transparent 62%),
+        radial-gradient(780px 480px at 100% 20%, rgba(139,215,255,.35) 0%, transparent 56%),
+        var(--bg);
+    }
+    .layout{display:grid;grid-template-columns:264px 1fr;min-height:100vh}
+    aside{
+      background:rgba(255,255,255,.88);backdrop-filter:blur(10px);
+      border-right:1px solid rgba(219,234,254,.9);
+      padding:18px 14px;position:sticky;top:0;height:100vh
+    }
+    .brand{display:flex;align-items:center;gap:10px;margin:6px 6px 18px;user-select:none}
+    .logo{
+      width:40px;height:40px;border-radius:16px;display:grid;place-items:center;
+      font-weight:900;color:#073b3a;
+      background:linear-gradient(135deg, rgba(113,240,218,.9), rgba(139,215,255,.9));
+      box-shadow:0 12px 26px rgba(15,23,42,.12);border:1px solid rgba(15,23,42,.06)
+    }
+    nav{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+    nav a{
+      text-decoration:none;color:var(--ink);padding:10px 12px;border-radius:16px;
+      border:1px solid transparent;display:flex;align-items:center;gap:10px
+    }
+    nav a:hover{background:#f1fbff}
+    nav a.active{
+      background:linear-gradient(135deg, rgba(113,240,218,.22), rgba(139,215,255,.16));
+      border-color:rgba(113,240,218,.40);font-weight:900
+    }
+    .sidebar-footer{
+      position:absolute;left:14px;right:14px;bottom:14px;
+      border-top:1px solid rgba(219,234,254,.9);padding-top:12px;
+      display:flex;justify-content:space-between;align-items:center;gap:12px;
+      font-size:12px;color:var(--muted)
+    }
+    .gear{
+      width:34px;height:30px;border-radius:999px;border:1px solid rgba(15,23,42,.10);
+      background:#fff;cursor:pointer;display:grid;place-items:center;
+      box-shadow:0 10px 20px rgba(15,23,42,.06)
+    }
+    .gear:hover{
+      background:linear-gradient(135deg, rgba(113,240,218,.20), rgba(139,215,255,.16));
+      border-color:rgba(113,240,218,.45)
+    }
+    main{padding:26px 22px}
+    .container{max-width:980px;margin:0 auto}
+    header{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+    header h1{margin:0;font-size:30px;letter-spacing:-.7px}
+    header p{margin:0;color:var(--muted);line-height:1.7}
+    .page{display:none;animation:pop .18s ease-out}
+    .page.active{display:block}
+    @keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+    .cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .card{background:var(--panel);border:1px solid rgba(219,234,254,.9);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+    .ribbon{
+      padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;
+      background:linear-gradient(135deg, rgba(113,240,218,.30), rgba(139,215,255,.16));
+      border-bottom:1px solid rgba(219,234,254,.9)
+    }
+    .badge{font-size:11px;padding:6px 10px;border-radius:999px;border:1px solid rgba(15,23,42,.12);background:rgba(255,255,255,.78);white-space:nowrap}
+    .body{padding:14px 16px 16px;line-height:1.8}
+    .body ul{margin:0;padding-left:18px}
+    .hint{margin-top:10px;font-size:12px;color:var(--muted)}
+    .panel{background:var(--panel);border:1px solid rgba(219,234,254,.9);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px}
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .search{
+      flex:1 1 320px;display:flex;align-items:center;gap:10px;
+      padding:10px 12px;border-radius:16px;border:1px solid rgba(15,23,42,.10);
+      background:linear-gradient(180deg,#fff,#fbfeff)
+    }
+    .search input{border:none;outline:none;width:100%;font-size:14px;background:transparent;color:var(--ink)}
+    .meta{color:var(--muted);font-size:12px;white-space:nowrap}
+    .list{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .song{
+      border:1px solid rgba(15,23,42,.10);
+      background:linear-gradient(135deg, rgba(113,240,218,.12), rgba(139,215,255,.08));
+      border-radius:16px;padding:12px 12px;display:flex;justify-content:space-between;gap:10px
+    }
+    .song b{display:block;letter-spacing:-.2px}
+    .song span{display:block;color:var(--muted);font-size:12px;margin-top:3px}
+    .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
+    .form{border:1px solid rgba(15,23,42,.10);background:linear-gradient(180deg,#fff,#fbfeff);border-radius:var(--radius);padding:14px}
+    .field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
+    label{font-size:12px;color:var(--muted)}
+    input[type="text"],input[type="password"]{padding:11px 12px;border-radius:16px;border:1px solid rgba(15,23,42,.12);outline:none;font-size:14px;background:#fff;color:var(--ink)}
+    .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    button{border:none;cursor:pointer;padding:10px 12px;border-radius:16px;font-weight:800;letter-spacing:-.2px;border:1px solid rgba(15,23,42,.10);background:#fff}
+    button.primary{
+      background:linear-gradient(135deg, rgba(113,240,218,.85), rgba(139,215,255,.75));
+      color:#073b3a;border-color:rgba(15,23,42,.06);box-shadow:0 12px 22px rgba(15,23,42,.10)
+    }
+    button:disabled{opacity:.55;cursor:not-allowed}
+    .tiny{font-size:12px;color:var(--muted);line-height:1.6}
+    .admin-list .song{background:#fff}
+    .del{font-size:12px;padding:8px 10px;border-radius:999px;border:1px solid rgba(239,68,68,.28);color:#b91c1c;background:rgba(239,68,68,.06);cursor:pointer;white-space:nowrap}
+    .modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.35);display:none;align-items:center;justify-content:center;padding:18px;z-index:50}
+    .modal{width:min(420px,100%);background:#fff;border-radius:22px;border:1px solid rgba(15,23,42,.10);box-shadow:0 30px 80px rgba(15,23,42,.25);overflow:hidden}
+    .modal-head{padding:14px 16px;background:linear-gradient(135deg, rgba(113,240,218,.30), rgba(139,215,255,.20));border-bottom:1px solid rgba(219,234,254,.9);display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .x{width:34px;height:30px;border-radius:999px;border:1px solid rgba(15,23,42,.10);background:#fff;cursor:pointer;display:grid;place-items:center}
+    .modal-body{padding:14px 16px 16px}
+    .warn{margin-top:8px;font-size:12px;color:#b91c1c;display:none}
+    @media (max-width:900px){
+      .layout{grid-template-columns:1fr}
+      aside{position:relative;height:auto}
+      .sidebar-footer{position:relative}
+      .cards,.list,.admin-grid{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside>
+      <div class="brand">
+        <div class="logo">♪</div>
+        <div>
+          <div style="font-weight:900;letter-spacing:-.2px;">심하 노래책</div>
+          <div style="font-size:12px;color:var(--muted);">Sky Mint Kitsch</div>
+        </div>
+      </div>
 
-function doGet(e){
-  // action 없으면 HTML 페이지를 보여줌
-  const action = e && e.parameter && e.parameter.action;
-  if(!action){
-    return HtmlService.createHtmlOutputFromFile("Index")
-      .setTitle("심하노래책");
-  }
-  // action 있으면 API 응답
-  return handleApi_(e);
-}
+      <nav>
+        <a href="#guide" class="navlink active" data-page="guide">🧾 이용안내</a>
+        <a href="#songs" class="navlink" data-page="songs">📚 신청가능목록</a>
+        <a href="#mission" class="navlink" data-page="mission">🎯 미션곡</a>
+        <a href="#admin" class="navlink" data-page="admin" id="adminNav" style="display:none;">⚙︎ 어드민</a>
+      </nav>
 
-function doPost(e){
-  return handleApi_(e);
-}
+      <div class="sidebar-footer">
+        <span>© 심하</span>
+        <button class="gear" id="openAdmin" title="어드민">⚙︎</button>
+      </div>
+    </aside>
 
-function handleApi_(e){
-  try{
-    const body = parseBody_(e);
-    const action = body.action || (e && e.parameter && e.parameter.action) || "list";
+    <main>
+      <div class="container">
 
-    // ✅ 누구나 목록 조회 가능
-    if(action === "list"){
-      return json_({ ok:true, songs: readAll_() });
+        <section class="page active" id="guide">
+          <header>
+            <h1>이용안내</h1>
+            <p>키치 한 스푼, 정리는 깔끔하게. 아래 카드만 보면 끝 🫧</p>
+          </header>
+
+          <div class="cards">
+            <article class="card">
+              <div class="ribbon">
+                <b>✅ 신청 방법</b>
+                <span class="badge">가수명 + 제목</span>
+              </div>
+              <div class="body">
+                <ul>
+                  <li>신청은 채팅에 <b>가수명 - 노래제목</b>만 적어주세요.</li>
+                  <li>목록에 있는 곡 위주로 진행돼요.</li>
+                  <li>대기 순서대로 차례차례 불러요.</li>
+                </ul>
+                <div class="hint">예시: 아이유 - 밤편지</div>
+              </div>
+            </article>
+
+            <article class="card">
+              <div class="ribbon">
+                <b>🫶 같이 보는 룰</b>
+                <span class="badge">분위기 보호</span>
+              </div>
+              <div class="body">
+                <ul>
+                  <li>반복/강요 요청은 흐름상 스킵될 수 있어요.</li>
+                  <li>노래/실력 평가성 채팅은 삼가주세요.</li>
+                  <li>비난/욕설/분쟁 유도는 제한될 수 있어요.</li>
+                </ul>
+                <div class="hint">방송은 같이 만드는 공기! 뽀송하게 지켜요 🧼</div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="page" id="songs">
+          <header>
+            <h1>신청가능목록</h1>
+            <p>검색해서 바로 찾을 수 있게. (가수/제목 아무거나 입력해도 필터링돼요)</p>
+          </header>
+
+          <div class="panel">
+            <div class="toolbar">
+              <div class="search">🔎 <input id="q" type="text" placeholder="가수 또는 제목 검색…" /></div>
+              <div class="meta"><span id="count">0</span>곡</div>
+            </div>
+            <div class="list" id="songList"></div>
+            <p class="tiny" style="margin-top:12px;">이 목록은 Google Sheets에 저장됩니다. (어느 PC에서 보든 동일)</p>
+          </div>
+        </section>
+
+        <section class="page" id="mission">
+          <header>
+            <h1>미션곡</h1>
+            <p>미션은 “룰이 간단할수록” 진행이 부드러워요. 아래는 예시 템플릿!</p>
+          </header>
+
+          <div class="panel">
+            <div class="cards" style="grid-template-columns:1fr;">
+              <article class="card">
+                <div class="ribbon">
+                  <b>🎯 미션 제출</b>
+                  <span class="badge">예시</span>
+                </div>
+                <div class="body">
+                  <ul>
+                    <li>채팅에 <b>미션: 가수명 - 노래제목</b>으로 남겨주세요.</li>
+                    <li>방송 흐름/컨디션에 따라 스킵될 수 있어요.</li>
+                    <li>미션 성공 보상은 방송 공지에 따라 달라요.</li>
+                  </ul>
+                  <div class="hint">원하면 미션곡도 시트로 분리 관리로 확장 가능!</div>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="page" id="admin">
+          <header>
+            <h1>어드민</h1>
+            <p>여기서 신청가능목록을 직접 추가/삭제할 수 있어요. (가수명, 제목만)</p>
+          </header>
+
+          <div class="admin-grid">
+            <div class="form">
+              <div class="field">
+                <label>가수명</label>
+                <input id="artist" type="text" placeholder="예: 아이유" />
+              </div>
+              <div class="field">
+                <label>노래제목</label>
+                <input id="title" type="text" placeholder="예: 밤편지" />
+              </div>
+
+              <div class="btnrow">
+                <button class="primary" id="addBtn">+ 추가</button>
+                <button id="logoutBtn">로그아웃</button>
+              </div>
+
+              <p class="tiny" style="margin-top:12px;">✨ 깔끔 룰: 입력은 <b>가수명 / 노래제목</b>만.</p>
+            </div>
+
+            <div class="panel admin-list">
+              <div class="toolbar">
+                <b style="letter-spacing:-.2px;">현재 목록</b>
+                <div class="meta"><span id="adminCount">0</span>곡</div>
+              </div>
+              <div class="list" id="adminList"></div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="modalBg">
+    <div class="modal">
+      <div class="modal-head">
+        <b>⚙︎ 어드민 로그인</b>
+        <button class="x" id="closeModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>비밀번호(토큰)</label>
+          <input id="pass" type="password" placeholder="토큰 입력" />
+        </div>
+        <div class="btnrow">
+          <button class="primary" id="loginBtn">접속</button>
+          <button id="cancelBtn">취소</button>
+        </div>
+        <div class="warn" id="warn">토큰이 틀렸어요.</div>
+        <p class="tiny" style="margin-top:10px;">* 이 방식은 “간단 접근용”이에요.</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* =========================
+       Settings
+       - Apps Script 웹앱(/exec)에서 이 HTML이 열리는 구조라면,
+         BASE_URL은 현재 페이지(/exec)로 맞추는 게 정답!
+    ========================= */
+    const BASE_URL = (() => {
+      const u = new URL(location.href);
+      u.search = "";
+      u.hash = "";
+      return u.toString(); // .../exec
+    })();
+
+    const AUTH_SESSION_KEY = "songbook_admin_token_session_v1";
+    const AUTH_OK_KEY      = "songbook_admin_ok_v1";
+
+    const $ = (id) => document.getElementById(id);
+
+    function norm(s){ return (s||"").toString().trim().replace(/\s+/g," "); }
+    function keyOf(a,t){ return `${norm(a).toLowerCase()}||${norm(t).toLowerCase()}`; }
+    function escapeHtml(str){
+      return (str ?? "").toString()
+        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;").replaceAll("'","&#039;");
     }
 
-    // ✅ auth/add/delete 는 토큰 필수
-    const token = body.token || (e && e.parameter && e.parameter.token) || "";
-    if(token !== ADMIN_TOKEN){
-      return json_({ ok:false, error:"unauthorized" });
+    function getToken(){ return sessionStorage.getItem(AUTH_SESSION_KEY) || ""; }
+
+    // ✅ 토큰 저장/삭제만 담당 (OK 플래그는 별도로 관리)
+    function setToken(t){
+      if(t) sessionStorage.setItem(AUTH_SESSION_KEY, t);
+      else sessionStorage.removeItem(AUTH_SESSION_KEY);
+
+      if(!t) sessionStorage.removeItem(AUTH_OK_KEY); // 토큰 없으면 OK도 제거
+      updateAdminVisibility();
     }
 
-    // ✅ 로그인 검증
-    if(action === "auth"){
-      return json_({ ok:true });
+    function isAuthed(){
+      // ✅ "검증 성공" + "토큰 존재" 둘 다 만족해야 어드민 인정
+      return sessionStorage.getItem(AUTH_OK_KEY) === "1" && !!getToken();
     }
 
-    if(action === "add"){
-      const artist = clean_(body.artist);
-      const title  = clean_(body.title);
-      if(!artist || !title) return json_({ ok:false, error:"missing_fields" });
-
-      if(exists_(artist, title)) return json_({ ok:false, error:"duplicate" });
-
-      const id = Utilities.getUuid().slice(0,8);
-      sheet_().appendRow([id, artist, title]);
-      return json_({ ok:true, id });
+    /* =========================
+       API
+       - Apps Script는 JSON Content-Type에서 가끔 꼬일 때가 있어서
+         text/plain으로 보내면 더 안정적이야.
+    ========================= */
+    async function api(action, payload={}){
+      const res = await fetch(BASE_URL, {
+        method: "POST",
+        headers: { "Content-Type":"text/plain;charset=utf-8" },
+        body: JSON.stringify({ action, ...payload }),
+        cache: "no-store"
+      });
+      const text = await res.text();
+      try { return JSON.parse(text); }
+      catch { return { ok:false, error:"bad_json_response", raw:text }; }
     }
 
-    if(action === "delete"){
-      const id = clean_(body.id);
-      if(!id) return json_({ ok:false, error:"missing_id" });
-
-      const sh = sheet_();
-      const last = sh.getLastRow();
-      if(last < 2) return json_({ ok:false, error:"not_found" });
-
-      const ids = sh.getRange(2,1,last-1,1).getValues().flat().map(String);
-      const idx = ids.findIndex(x => x === id);
-      if(idx === -1) return json_({ ok:false, error:"not_found" });
-
-      sh.deleteRow(idx + 2);
-      return json_({ ok:true });
+    async function listSongs(){
+      const data = await api("list");
+      if(!data.ok) throw new Error(data.error || "list_failed");
+      return data.songs || [];
+    }
+    async function addSong(artist, title){
+      const data = await api("add", { token:getToken(), artist, title });
+      if(!data.ok) throw new Error(data.error || "add_failed");
+      return data.id;
+    }
+    async function deleteSong(id){
+      const data = await api("delete", { token:getToken(), id });
+      if(!data.ok) throw new Error(data.error || "delete_failed");
+      return true;
     }
 
-    return json_({ ok:false, error:"unknown_action" });
+    let SONGS = [];
 
-  }catch(err){
-    console.error(err);
-    return json_({ ok:false, error:String(err) });
-  }
-}
+    function renderSongs(){
+      const q = norm($("q")?.value).toLowerCase();
+      const filtered = SONGS.filter(x=>{
+        const a=(x.artist||"").toLowerCase();
+        const t=(x.title||"").toLowerCase();
+        return !q || a.includes(q) || t.includes(q);
+      });
 
-function sheet_(){
-  const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
-  const sh = ss.getSheetByName(SHEET_NAME);
-  if(!sh) throw new Error("Sheet not found: " + SHEET_NAME);
-  return sh;
-}
+      $("count").textContent = filtered.length;
 
-function readAll_(){
-  const sh = sheet_();
-  const last = sh.getLastRow();
-  if(last < 2) return [];
-  const rows = sh.getRange(2,1,last-1,3).getValues();
-  return rows
-    .filter(r => r[0] && r[1] && r[2])
-    .map(r => ({ id:String(r[0]), artist:String(r[1]), title:String(r[2]) }))
-    .sort((a,b) => a.artist.localeCompare(b.artist,"ko") || a.title.localeCompare(b.title,"ko"));
-}
+      const list = $("songList");
+      list.innerHTML = filtered.length ? "" :
+        `<div class="tiny" style="padding:10px;color:var(--muted);">아직 곡이 없어요. ⚙︎ 어드민에서 추가해보세요.</div>`;
 
-function exists_(artist, title){
-  const sh = sheet_();
-  const last = sh.getLastRow();
-  if(last < 2) return false;
-  const values = sh.getRange(2,2,last-1,2).getValues(); // artist,title
-  const key = normKey_(artist,title);
-  return values.some(r => normKey_(r[0], r[1]) === key);
-}
-
-function normKey_(a,t){
-  return clean_(a).toLowerCase() + "||" + clean_(t).toLowerCase();
-}
-
-function clean_(s){
-  return (s ?? "").toString().trim().replace(/\s+/g," ");
-}
-
-function parseBody_(e){
-  try{
-    if(e && e.postData && e.postData.contents){
-      return JSON.parse(e.postData.contents);
+      filtered.forEach(x=>{
+        const div=document.createElement("div");
+        div.className="song";
+        div.innerHTML=`
+          <div>
+            <b>${escapeHtml(x.title)}</b>
+            <span>${escapeHtml(x.artist)}</span>
+          </div>
+          <span class="badge">가수-제목</span>
+        `;
+        list.appendChild(div);
+      });
     }
-  }catch(_){}
-  return {};
-}
 
-function json_(obj){
-  const out = ContentService.createTextOutput(JSON.stringify(obj));
-  out.setMimeType(ContentService.MimeType.JSON);
-  return out;
-}
+    function renderAdminList(){
+      $("adminCount").textContent = SONGS.length;
+
+      const list = $("adminList");
+      list.innerHTML = SONGS.length ? "" :
+        `<div class="tiny" style="padding:10px;color:var(--muted);">아직 등록된 곡이 없어요.</div>`;
+
+      SONGS.forEach(x=>{
+        const div=document.createElement("div");
+        div.className="song";
+        div.innerHTML=`
+          <div>
+            <b>${escapeHtml(x.title)}</b>
+            <span>${escapeHtml(x.artist)}</span>
+          </div>
+          <button class="del" data-id="${escapeHtml(x.id)}">삭제</button>
+        `;
+        list.appendChild(div);
+      });
+
+      list.querySelectorAll(".del").forEach(btn=>{
+        btn.addEventListener("click", async ()=>{
+          if(!isAuthed()){
+            forceLogout("권한이 없어요. 다시 로그인해주세요.");
+            return;
+          }
+
+          const id=btn.dataset.id;
+          btn.disabled=true;
+          try{
+            await deleteSong(id);
+            await refreshSongs();
+          }catch(e){
+            if(e.message==="unauthorized"){
+              forceLogout("권한이 없어요. 다시 로그인해주세요.");
+              return;
+            }
+            alert("삭제 실패: "+e.message);
+          }finally{
+            btn.disabled=false;
+          }
+        });
+      });
+    }
+
+    async function refreshSongs(){
+      SONGS = await listSongs();
+      renderSongs();
+      if(isAuthed()) renderAdminList();
+    }
+
+    function forceLogout(msg){
+      if(msg) alert(msg);
+      sessionStorage.removeItem(AUTH_OK_KEY);
+      setToken("");
+      show("guide");
+      openModal();
+    }
+
+    /* =========================
+       Router
+    ========================= */
+    const links=document.querySelectorAll(".navlink");
+    const pages=document.querySelectorAll(".page");
+
+    function show(pageId){
+      // ✅ 어드민은 반드시 인증된 상태만
+      if(pageId === "admin" && !isAuthed()){
+        // 해시로 직접 들어와도 막힘
+        pages.forEach(p=>p.classList.toggle("active", p.id==="guide"));
+        links.forEach(a=>a.classList.toggle("active", a.dataset.page==="guide"));
+        history.replaceState(null,"","#guide");
+        openModal();
+        return;
+      }
+
+      pages.forEach(p=>p.classList.toggle("active", p.id===pageId));
+      links.forEach(a=>a.classList.toggle("active", a.dataset.page===pageId));
+      history.replaceState(null,"","#"+pageId);
+
+      if(pageId==="songs") refreshSongs().catch(()=>{});
+      if(pageId==="admin") refreshSongs().then(renderAdminList).catch(()=>{});
+    }
+
+    links.forEach(a=>{
+      a.addEventListener("click",(e)=>{
+        e.preventDefault();
+        const target=a.dataset.page;
+        if(target==="admin" && !isAuthed()){
+          openModal();
+          return;
+        }
+        show(target);
+      });
+    });
+
+    $("q")?.addEventListener("input", renderSongs);
+
+    /* =========================
+       Admin add
+    ========================= */
+    $("addBtn")?.addEventListener("click", async ()=>{
+      if(!isAuthed()){
+        forceLogout("권한이 없어요. 다시 로그인해주세요.");
+        return;
+      }
+
+      const artist=norm($("artist").value);
+      const title=norm($("title").value);
+      if(!artist || !title){ alert("가수명과 노래제목을 모두 입력해주세요!"); return; }
+
+      const k=keyOf(artist,title);
+      if(SONGS.some(s=>keyOf(s.artist,s.title)===k)){
+        alert("이미 목록에 있는 곡이에요!");
+        return;
+      }
+
+      $("addBtn").disabled=true;
+      try{
+        await addSong(artist,title);
+        $("artist").value=""; $("title").value="";
+        $("artist").focus();
+        await refreshSongs();
+      }catch(e){
+        if(e.message==="duplicate") alert("이미 목록에 있는 곡이에요!");
+        else if(e.message==="unauthorized") forceLogout("권한이 없어요. 다시 로그인해주세요.");
+        else alert("추가 실패: "+e.message);
+      }finally{
+        $("addBtn").disabled=false;
+      }
+    });
+
+    $("logoutBtn")?.addEventListener("click", ()=>{
+      sessionStorage.removeItem(AUTH_OK_KEY);
+      setToken("");
+      show("guide");
+    });
+
+    function updateAdminVisibility(){
+      const adminNav=document.getElementById("adminNav");
+      if(adminNav) adminNav.style.display = isAuthed() ? "" : "none";
+    }
+
+    /* =========================
+       Modal login
+    ========================= */
+    const modalBg=$("modalBg");
+    const warn=$("warn");
+
+    function openModal(){
+      warn.style.display="none";
+      $("pass").value="";
+      modalBg.style.display="flex";
+      setTimeout(()=>$("pass").focus(),0);
+    }
+    function closeModal(){ modalBg.style.display="none"; }
+
+    $("openAdmin").addEventListener("click", openModal);
+    $("closeModal").addEventListener("click", closeModal);
+    $("cancelBtn").addEventListener("click", closeModal);
+    modalBg.addEventListener("click",(e)=>{ if(e.target===modalBg) closeModal(); });
+
+    // ✅ 토큰 검증 로그인: auth가 ok:true일 때만 어드민 OK
+    $("loginBtn").addEventListener("click", async ()=>{
+      const p=$("pass").value.trim();
+      if(!p){
+        warn.style.display="block";
+        return;
+      }
+
+      $("loginBtn").disabled=true;
+      warn.style.display="none";
+
+      // 일단 초기화
+      sessionStorage.removeItem(AUTH_OK_KEY);
+      setToken(""); // 토큰/OK 모두 제거
+
+      try{
+        const data = await api("auth", { token:p });
+
+        if(data && data.ok){
+          // ✅ 핵심: OK 플래그를 먼저 박고, 토큰 저장 후 UI 갱신
+          sessionStorage.setItem(AUTH_OK_KEY,"1");
+          setToken(p);
+          updateAdminVisibility();
+
+          closeModal();
+          show("admin");
+        }else{
+          warn.style.display="block";
+        }
+      }catch(err){
+        warn.style.display="block";
+        alert("로그인 확인 실패! (배포/권한/네트워크 확인)");
+      }finally{
+        $("loginBtn").disabled=false;
+      }
+    });
+
+    $("pass").addEventListener("keydown",(e)=>{
+      if(e.key==="Enter") $("loginBtn").click();
+      if(e.key==="Escape") closeModal();
+    });
+
+    /* =========================
+       Boot
+       - 새로고침해도 OK 플래그가 없으면 어드민 불가
+    ========================= */
+    updateAdminVisibility();
+
+    const initial=(location.hash||"#guide").replace("#","");
+    show(["guide","songs","mission","admin"].includes(initial) ? initial : "guide");
+
+    refreshSongs().catch(()=>{});
+  </script>
+</body>
+</html>
