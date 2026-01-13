@@ -395,7 +395,6 @@
         <a href="#guide" class="navlink active" data-page="guide">🧾 이용안내</a>
         <a href="#songs" class="navlink" data-page="songs">📚 신청가능목록</a>
         <a href="#mission" class="navlink" data-page="mission">🎯 미션곡</a>
-        <!-- 어드민은 숨김 페이지: 로그인 후에만 이동 가능 -->
         <a href="#admin" class="navlink" data-page="admin" id="adminNav" style="display:none;">⚙︎ 어드민</a>
       </nav>
 
@@ -466,7 +465,7 @@
             <div class="list" id="songList"></div>
 
             <p class="tiny" style="margin-top:12px;">
-              ✅ 곡 목록은 Google Sheets에 저장되어, 다른 PC/휴대폰에서도 동일하게 보여요.
+              이 목록은 Google Sheets에 저장됩니다. (어느 PC에서 보든 동일하게 보여요)
             </p>
           </div>
         </section>
@@ -491,7 +490,7 @@
                     <li>방송 흐름/컨디션에 따라 스킵될 수 있어요.</li>
                     <li>미션 성공 보상은 방송 공지에 따라 달라요.</li>
                   </ul>
-                  <div class="hint">원하면 미션곡도 어드민에서 따로 관리하는 버전으로 확장 가능!</div>
+                  <div class="hint">원하면 미션곡도 시트로 분리해서 관리하는 버전으로 확장 가능!</div>
                 </div>
               </article>
             </div>
@@ -522,14 +521,13 @@
               </div>
 
               <p class="tiny" style="margin-top:12px;">
-                ✨ 깔끔 룰: 입력은 <b>가수명 / 노래제목</b>만. (키/멘트/가격표 같은 건 일부러 안 넣었어요)
+                ✨ 깔끔 룰: 입력은 <b>가수명 / 노래제목</b>만. (중복 곡은 자동으로 막아요)
               </p>
 
               <hr style="border:none;border-top:1px solid rgba(219,234,254,.9); margin:14px 0;">
 
               <p class="tiny">
-                🔐 어드민 비번(토큰)은 <b>Google Apps Script</b>의 <code>ADMIN_TOKEN</code> 값이에요.<br>
-                (여기 HTML에는 비번을 저장하지 않아요)
+                🔐 로그인은 “토큰 입력” 방식이에요. (토큰은 코드에 저장하지 않아서 더 안전해요)
               </p>
             </div>
 
@@ -556,337 +554,310 @@
       </div>
       <div class="modal-body">
         <div class="field">
-          <label>비밀번호</label>
-          <input id="pass" type="password" placeholder="비밀번호 입력" />
+          <label>비밀번호(토큰)</label>
+          <input id="pass" type="password" placeholder="토큰 입력" />
         </div>
         <div class="btnrow">
           <button class="primary" id="loginBtn">접속</button>
           <button id="cancelBtn">취소</button>
         </div>
-        <div class="warn" id="warn">비밀번호가 틀렸어요.</div>
+        <div class="warn" id="warn">토큰이 틀렸어요.</div>
         <p class="tiny" style="margin-top:10px;">
-          * 이 로그인은 “간단 접근용”이에요. 파일만 있으면 코드로 비번이 보이기 때문에, 진짜 보안이 필요하면 서버형 로그인으로 바꿔야 해요.
+          * 이 로그인은 “접근용”이에요. 실제 보안이 더 필요하면 DB 인증으로 강화할 수 있어요.
         </p>
       </div>
     </div>
   </div>
 
   <script>
-  /* =========================
-     Settings
-  ========================= */
-  const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMxEG1SJb3RqD1Cw_vBFzSM9gkvCNll8T8Q-Xt5rbohcpZqKy4a_fkolHjoF7O4f7vEg/exec";
+    /* =========================
+       Settings (이미 네 URL 세팅 완료)
+    ========================= */
+    const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMxEG1SJb3RqD1Cw_vBFzSM9gkvCNll8T8Q-Xt5rbohcpZqKy4a_fkolHjoF7O4f7vEg/exec";
+    const AUTH_SESSION_KEY = "songbook_admin_token_session_v1";
 
-  // 어드민 상태/토큰 (토큰=Apps Script의 ADMIN_TOKEN)
-  const AUTH_KEY  = "songbook_admin_authed_v2";
-  const TOKEN_KEY = "songbook_admin_token_v1";
+    /* =========================
+       Helpers
+    ========================= */
+    const $ = (id) => document.getElementById(id);
 
-  /* =========================
-     Helpers
-  ========================= */
-  const $ = (id) => document.getElementById(id);
-
-  function norm(s){
-    return (s || "").toString().trim().replace(/\s+/g, " ");
-  }
-  function keyOf(artist, title){
-    return `${norm(artist).toLowerCase()}||${norm(title).toLowerCase()}`;
-  }
-  function escapeHtml(str){
-    return (str ?? "").toString()
-      .replaceAll("&","&amp;")
-      .replaceAll("<","&lt;")
-      .replaceAll(">","&gt;")
-      .replaceAll('"',"&quot;")
-      .replaceAll("'","&#039;");
-  }
-
-  function setAuthed(v, token=""){
-    localStorage.setItem(AUTH_KEY, v ? "1" : "0");
-    if(v && token){
-      sessionStorage.setItem(TOKEN_KEY, token);
+    function norm(s){
+      return (s || "").toString().trim().replace(/\s+/g," ");
     }
-    if(!v){
-      sessionStorage.removeItem(TOKEN_KEY);
+    function keyOf(artist, title){
+      return `${norm(artist).toLowerCase()}||${norm(title).toLowerCase()}`;
     }
-    updateAdminVisibility();
-  }
-  function isAuthed(){
-    return localStorage.getItem(AUTH_KEY) === "1";
-  }
-  function getToken(){
-    return sessionStorage.getItem(TOKEN_KEY) || "";
-  }
-  function updateAdminVisibility(){
-    $("adminNav").style.display = isAuthed() ? "" : "none";
-  }
+    function escapeHtml(str){
+      return (str ?? "").toString()
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
+    }
 
-  /* =========================
-     API (Google Sheets via Apps Script)
-  ========================= */
-  async function api(action, payload = {}){
-    const res = await fetch(SCRIPT_URL, {
-      method: "POST",
-      headers: { "Content-Type":"application/json" },
-      body: JSON.stringify({ action, ...payload })
-    });
-    const data = await res.json().catch(() => ({}));
-    return data;
-  }
+    function getToken(){
+      return sessionStorage.getItem(AUTH_SESSION_KEY) || "";
+    }
+    function setToken(t){
+      if(t) sessionStorage.setItem(AUTH_SESSION_KEY, t);
+      else sessionStorage.removeItem(AUTH_SESSION_KEY);
+      updateAdminVisibility();
+    }
+    function isAuthed(){
+      return !!getToken();
+    }
 
-  async function fetchSongs(){
-    const data = await api("list");
-    if(!data.ok) throw new Error(data.error || "list_failed");
-    return Array.isArray(data.songs) ? data.songs : [];
-  }
+    /* =========================
+       API
+    ========================= */
+    async function api(action, payload={}){
+      const res = await fetch(SCRIPT_URL, {
+        method: "POST",
+        headers: { "Content-Type":"application/json" },
+        body: JSON.stringify({ action, ...payload })
+      });
+      const data = await res.json().catch(() => ({}));
+      return data;
+    }
 
-  async function addSongRemote(artist, title){
-    const token = getToken();
-    const data = await api("add", { token, artist, title });
-    if(!data.ok) throw new Error(data.error || "add_failed");
-    return data.id;
-  }
+    async function listSongs(){
+      const data = await api("list");
+      if(!data.ok) throw new Error(data.error || "list_failed");
+      return data.songs || [];
+    }
 
-  async function deleteSongRemote(id){
-    const token = getToken();
-    const data = await api("delete", { token, id });
-    if(!data.ok) throw new Error(data.error || "delete_failed");
-    return true;
-  }
+    async function addSong(artist, title){
+      const data = await api("add", { token: getToken(), artist, title });
+      if(!data.ok) throw new Error(data.error || "add_failed");
+      return data.id;
+    }
 
-  /* =========================
-     State + Render
-  ========================= */
-  let SONGS = []; // {id, artist, title}
+    async function deleteSong(id){
+      const data = await api("delete", { token: getToken(), id });
+      if(!data.ok) throw new Error(data.error || "delete_failed");
+      return true;
+    }
 
-  async function refreshSongs(){
-    try{
-      SONGS = await fetchSongs();
-      renderSongs();
-      if(isAuthed()) renderAdminList();
-    }catch(e){
-      console.warn(e);
-      // 목록 페이지에서만 안내 문구 보여주기
+    /* =========================
+       State
+    ========================= */
+    let SONGS = []; // {id, artist, title}
+
+    /* =========================
+       Render
+    ========================= */
+    function renderSongs(){
+      const q = norm($("q")?.value).toLowerCase();
+      const filtered = SONGS.filter(x => {
+        const a = (x.artist||"").toLowerCase();
+        const t = (x.title||"").toLowerCase();
+        return !q || a.includes(q) || t.includes(q);
+      });
+
+      $("count").textContent = filtered.length;
+
       const list = $("songList");
-      if(list){
-        list.innerHTML = `<div class="tiny" style="padding:10px;color:var(--muted);">
-          목록을 불러오지 못했어요. (SCRIPT_URL/웹앱 배포 상태 확인) 🫧
-        </div>`;
+      list.innerHTML = filtered.length ? "" :
+        `<div class="tiny" style="padding:10px;color:var(--muted);">아직 곡이 없어요. ⚙︎ 어드민에서 추가해보세요.</div>`;
+
+      filtered.forEach(x => {
+        const div = document.createElement("div");
+        div.className = "song";
+        div.innerHTML = `
+          <div>
+            <b>${escapeHtml(x.title)}</b>
+            <span>${escapeHtml(x.artist)}</span>
+          </div>
+          <span class="badge">가수-제목</span>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function renderAdminList(){
+      $("adminCount").textContent = SONGS.length;
+
+      const list = $("adminList");
+      list.innerHTML = SONGS.length ? "" :
+        `<div class="tiny" style="padding:10px;color:var(--muted);">아직 등록된 곡이 없어요.</div>`;
+
+      SONGS.forEach(x => {
+        const div = document.createElement("div");
+        div.className = "song";
+        div.innerHTML = `
+          <div>
+            <b>${escapeHtml(x.title)}</b>
+            <span>${escapeHtml(x.artist)}</span>
+          </div>
+          <button class="del" data-id="${escapeHtml(x.id)}">삭제</button>
+        `;
+        list.appendChild(div);
+      });
+
+      list.querySelectorAll(".del").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const id = btn.dataset.id;
+          btn.disabled = true;
+          try{
+            await deleteSong(id);
+            await refreshSongs();
+          }catch(e){
+            if(e.message === "unauthorized"){
+              alert("권한이 없어요. 다시 로그인해주세요.");
+              setToken("");
+              show("guide");
+              openModal();
+              return;
+            }
+            alert("삭제 실패: " + e.message);
+          }finally{
+            btn.disabled = false;
+          }
+        });
+      });
+    }
+
+    async function refreshSongs(){
+      SONGS = await listSongs();
+      renderSongs();
+      if (isAuthed()) renderAdminList();
+    }
+
+    /* =========================
+       Router
+    ========================= */
+    const links = document.querySelectorAll(".navlink");
+    const pages = document.querySelectorAll(".page");
+
+    function show(pageId){
+      pages.forEach(p => p.classList.toggle("active", p.id === pageId));
+      links.forEach(a => a.classList.toggle("active", a.dataset.page === pageId));
+      history.replaceState(null, "", "#" + pageId);
+
+      if(pageId === "songs") refreshSongs().catch(() => {});
+      if(pageId === "admin"){
+        if(!isAuthed()){
+          show("guide");
+          openModal();
+          return;
+        }
+        refreshSongs().then(renderAdminList).catch(() => {});
       }
     }
-  }
 
-  function renderSongs(){
-    const q = norm($("q")?.value).toLowerCase();
-    const filtered = SONGS.filter(x => {
-      const a = (x.artist || "").toLowerCase();
-      const t = (x.title  || "").toLowerCase();
-      return !q || a.includes(q) || t.includes(q);
-    });
-
-    $("count").textContent = filtered.length;
-
-    const list = $("songList");
-    list.innerHTML = filtered.length
-      ? ""
-      : `<div class="tiny" style="padding:10px;color:var(--muted);">아직 곡이 없어요. ⚙︎ 어드민에서 추가해보세요.</div>`;
-
-    filtered.forEach((x) => {
-      const div = document.createElement("div");
-      div.className = "song";
-      div.innerHTML = `
-        <div>
-          <b>${escapeHtml(x.title)}</b>
-          <span>${escapeHtml(x.artist)}</span>
-        </div>
-        <span class="badge" title="표기 형식">가수-제목</span>
-      `;
-      list.appendChild(div);
-    });
-  }
-
-  function renderAdminList(){
-    $("adminCount").textContent = SONGS.length;
-
-    const list = $("adminList");
-    list.innerHTML = SONGS.length
-      ? ""
-      : `<div class="tiny" style="padding:10px;color:var(--muted);">아직 등록된 곡이 없어요.</div>`;
-
-    SONGS.forEach((x) => {
-      const div = document.createElement("div");
-      div.className = "song";
-      div.innerHTML = `
-        <div>
-          <b>${escapeHtml(x.title)}</b>
-          <span>${escapeHtml(x.artist)}</span>
-        </div>
-        <button class="del" data-id="${escapeHtml(x.id)}">삭제</button>
-      `;
-      list.appendChild(div);
-    });
-
-    list.querySelectorAll(".del").forEach(btn => {
-      btn.addEventListener("click", async () => {
-        const id = btn.dataset.id;
-        btn.disabled = true;
-        try{
-          await deleteSongRemote(id);
-          await refreshSongs();
-        }catch(e){
-          if(String(e.message).includes("unauthorized")){
-            alert("어드민 권한이 없어요. 다시 로그인해주세요!");
-            setAuthed(false);
-            show("guide");
-            openModal();
-          }else{
-            alert("삭제 실패: " + e.message);
-          }
-        }finally{
-          btn.disabled = false;
+    links.forEach(a => {
+      a.addEventListener("click", (e) => {
+        e.preventDefault();
+        const target = a.dataset.page;
+        if(target === "admin" && !isAuthed()){
+          openModal();
+          return;
         }
+        show(target);
       });
     });
-  }
 
-  /* =========================
-     Router (hash pages)
-  ========================= */
-  const links = document.querySelectorAll(".navlink");
-  const pages = document.querySelectorAll(".page");
+    /* =========================
+       Search
+    ========================= */
+    $("q")?.addEventListener("input", renderSongs);
 
-  function show(pageId){
-    pages.forEach(p => p.classList.toggle("active", p.id === pageId));
-    links.forEach(a => a.classList.toggle("active", a.dataset.page === pageId));
-    history.replaceState(null, "", "#" + pageId);
+    /* =========================
+       Admin add (중복 방지)
+    ========================= */
+    $("addBtn")?.addEventListener("click", async () => {
+      const artist = norm($("artist").value);
+      const title  = norm($("title").value);
 
-    if(pageId === "songs") refreshSongs();
-    if(pageId === "admin"){
-      if(!isAuthed()){
-        show("guide");
-        openModal();
+      if(!artist || !title){
+        alert("가수명과 노래제목을 모두 입력해주세요!");
         return;
       }
-      refreshSongs();
-    }
-  }
 
-  links.forEach(a => {
-    a.addEventListener("click", (e) => {
-      e.preventDefault();
-      const target = a.dataset.page;
-      if(target === "admin" && !isAuthed()){
-        openModal();
+      // 1차: 프론트 중복 방지
+      const k = keyOf(artist, title);
+      const has = SONGS.some(s => keyOf(s.artist, s.title) === k);
+      if(has){
+        alert("이미 목록에 있는 곡이에요! (중복 등록 방지)");
         return;
       }
-      show(target);
+
+      $("addBtn").disabled = true;
+      try{
+        await addSong(artist, title); // 2차: 서버도 중복 체크
+        $("artist").value = "";
+        $("title").value = "";
+        $("artist").focus();
+        await refreshSongs();
+      }catch(e){
+        if(e.message === "duplicate"){
+          alert("이미 목록에 있는 곡이에요! (서버 중복 방지)");
+        }else if(e.message === "unauthorized"){
+          alert("어드민 권한이 없어요. 다시 로그인해주세요.");
+          setToken("");
+          show("guide");
+          openModal();
+        }else{
+          alert("추가 실패: " + e.message);
+        }
+      }finally{
+        $("addBtn").disabled = false;
+      }
     });
-  });
 
-  // Initial
-  updateAdminVisibility();
-  const initial = (location.hash || "#guide").replace("#","");
-  show(["guide","songs","mission","admin"].includes(initial) ? initial : "guide");
+    $("logoutBtn")?.addEventListener("click", () => {
+      setToken("");
+      show("guide");
+    });
 
-  /* =========================
-     Search
-  ========================= */
-  $("q").addEventListener("input", renderSongs);
-
-  /* =========================
-     Admin actions (add + duplicate block)
-  ========================= */
-  $("addBtn").addEventListener("click", async () => {
-    const artist = norm($("artist").value);
-    const title  = norm($("title").value);
-
-    if(!artist || !title){
-      alert("가수명과 노래제목을 모두 입력해주세요!");
-      return;
+    function updateAdminVisibility(){
+      const adminNav = document.getElementById("adminNav");
+      if(adminNav) adminNav.style.display = isAuthed() ? "" : "none";
     }
 
-    // 프론트 중복 방지
-    const k = keyOf(artist, title);
-    if(SONGS.some(s => keyOf(s.artist, s.title) === k)){
-      alert("이미 목록에 있는 곡이에요! (중복 등록 방지)");
-      return;
-    }
+    /* =========================
+       Modal login
+    ========================= */
+    const modalBg = $("modalBg");
+    const warn = $("warn");
 
-    $("addBtn").disabled = true;
-    try{
-      await addSongRemote(artist, title); // 서버에서도 중복 체크
-      $("artist").value = "";
-      $("title").value = "";
-      $("artist").focus();
-      await refreshSongs();
-    }catch(e){
-      const msg = String(e.message);
-      if(msg.includes("duplicate")){
-        alert("이미 목록에 있는 곡이에요! (서버 중복 방지)");
-      }else if(msg.includes("unauthorized")){
-        alert("어드민 권한이 없어요. 다시 로그인해주세요!");
-        setAuthed(false);
-        show("guide");
-        openModal();
+    function openModal(){
+      warn.style.display = "none";
+      $("pass").value = "";
+      modalBg.style.display = "flex";
+      setTimeout(() => $("pass").focus(), 0);
+    }
+    function closeModal(){ modalBg.style.display = "none"; }
+
+    $("openAdmin").addEventListener("click", openModal);
+    $("closeModal").addEventListener("click", closeModal);
+    $("cancelBtn").addEventListener("click", closeModal);
+    modalBg.addEventListener("click", (e) => { if(e.target === modalBg) closeModal(); });
+
+    $("loginBtn").addEventListener("click", () => {
+      const p = $("pass").value;
+      if(p){
+        setToken(p);      // 토큰을 세션에만 저장
+        closeModal();
+        show("admin");
       }else{
-        alert("추가 실패: " + msg);
+        warn.style.display = "block";
       }
-    }finally{
-      $("addBtn").disabled = false;
-    }
-  });
+    });
 
-  $("logoutBtn").addEventListener("click", () => {
-    setAuthed(false);
-    show("guide");
-  });
+    $("pass").addEventListener("keydown", (e) => {
+      if(e.key === "Enter") $("loginBtn").click();
+      if(e.key === "Escape") closeModal();
+    });
 
-  /* =========================
-     Modal login (token 입력 방식)
-  ========================= */
-  const modalBg = $("modalBg");
-  const warn = $("warn");
-
-  function openModal(){
-    warn.style.display = "none";
-    $("pass").value = "";
-    modalBg.style.display = "flex";
-    setTimeout(() => $("pass").focus(), 0);
-  }
-  function closeModal(){
-    modalBg.style.display = "none";
-  }
-
-  $("openAdmin").addEventListener("click", openModal);
-  $("closeModal").addEventListener("click", closeModal);
-  $("cancelBtn").addEventListener("click", closeModal);
-  modalBg.addEventListener("click", (e) => {
-    if(e.target === modalBg) closeModal();
-  });
-
-  $("loginBtn").addEventListener("click", async () => {
-    const token = norm($("pass").value);
-    if(!token){
-      warn.textContent = "비밀번호(토큰)를 입력해주세요.";
-      warn.style.display = "block";
-      return;
-    }
-
-    // 토큰 저장 후, 어드민 진입 (토큰 검증은 add/delete에서 확실히 걸러짐)
-    setAuthed(true, token);
-    closeModal();
-    show("admin");
-  });
-
-  $("pass").addEventListener("keydown", (e) => {
-    if(e.key === "Enter") $("loginBtn").click();
-    if(e.key === "Escape") closeModal();
-  });
-
-  // 첫 로드에서 목록 미리 땡겨오기(선택)
-  refreshSongs();
-</script>
+    /* =========================
+       Boot
+    ========================= */
+    updateAdminVisibility();
+    const initial = (location.hash || "#guide").replace("#","");
+    show(["guide","songs","mission","admin"].includes(initial) ? initial : "guide");
+    refreshSongs().catch(err => console.warn("Sheet 연결 실패:", err));
+  </script>
 </body>
 </html>
-
-
