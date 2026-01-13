@@ -601,20 +601,23 @@
       updateAdminVisibility();
     }
     function isAuthed(){
-      return sessionStorage.getItem(AUTH_OK_KEY) === "1";
+      // ✅ OK 플래그 + 토큰 둘 다 있어야 진짜 로그인
+      return sessionStorage.getItem(AUTH_OK_KEY) === "1" && !!getToken();
     }
 
     /* =========================
-       API
+       API (CORS/프리플라이트 안정화)
     ========================= */
-    async function api(action, payload={}){
+    async function api(action, payload = {}){
       const res = await fetch(SCRIPT_URL, {
         method: "POST",
-        headers: { "Content-Type":"application/json" },
+        headers: { "Content-Type": "text/plain;charset=utf-8" }, // ✅ 프리플라이트 회피
         body: JSON.stringify({ action, ...payload })
       });
-      const data = await res.json().catch(() => ({}));
-      return data;
+
+      const text = await res.text();
+      try { return JSON.parse(text); }
+      catch { return { ok:false, error:"bad_json_response", raw:text }; }
     }
 
     async function listSongs(){
@@ -844,15 +847,19 @@
       $("loginBtn").disabled = true;
       warn.style.display = "none";
 
+      // 새 로그인 시도 전에 이전 OK 흔적 제거
+      sessionStorage.removeItem(AUTH_OK_KEY);
+
       try{
         const data = await api("auth", { token: p });
         if(data && data.ok){
           setToken(p);
-          sessionStorage.setItem(AUTH_OK_KEY, "1"); // ✅ 검증 완료 표시
+          sessionStorage.setItem(AUTH_OK_KEY, "1");
           closeModal();
           show("admin");
         }else{
           warn.style.display = "block";
+          setToken("");
         }
       }catch(err){
         warn.style.display = "block";
@@ -875,15 +882,23 @@
     show(["guide","songs","mission","admin"].includes(initial) ? initial : "guide");
     refreshSongs().catch(err => console.warn("Sheet 연결 실패:", err));
 
-    // ✅ 새로고침 시 저장된 토큰이 틀리면 자동 로그아웃 + OK 플래그 제거
+    // ✅ 새로고침 시 저장된 토큰이 틀리면 자동 로그아웃
     async function validateSessionToken(){
       const t = getToken();
-      if(!t) return;
+      if(!t){
+        sessionStorage.removeItem(AUTH_OK_KEY);
+        updateAdminVisibility();
+        return;
+      }
 
       const data = await api("auth", { token: t }).catch(() => null);
       if(!data || !data.ok){
         sessionStorage.removeItem(AUTH_OK_KEY);
         setToken("");
+      }else{
+        // 토큰이 유효하면 OK 플래그도 복구
+        sessionStorage.setItem(AUTH_OK_KEY, "1");
+        updateAdminVisibility();
       }
     }
     validateSessionToken();
