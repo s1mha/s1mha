@@ -6,120 +6,377 @@
   <title>심하노래책</title>
   <style>
     :root{
-      --bg:#f7fffd; --panel:#fff; --ink:#0f172a; --muted:#64748b;
-      --mint:#71f0da; --sky:#8bd7ff;
-      --radius:18px; --shadow:0 14px 36px rgba(15,23,42,.08);
+      /* Sky Mint Kitsch */
+      --bg: #f7fffd;
+      --panel: #ffffff;
+      --ink: #0f172a;
+      --muted:#64748b;
+      --line:#dbeafe;
+
+      --mint:#71f0da;   /* 하늘민트 포인트 */
+      --sky:#8bd7ff;    /* 스카이 */
+      --tint:#e8fffa;   /* 민트 연한 배경 */
+      --tint2:#eaf6ff;  /* 스카이 연한 배경 */
+
+      --radius: 18px;
+      --shadow: 0 14px 36px rgba(15,23,42,.08);
     }
-    *{box-sizing:border-box}
+
+    *{ box-sizing:border-box; }
     body{
       margin:0;
-      font-family: ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans KR",Arial,"Apple SD Gothic Neo",sans-serif;
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", Arial, "Apple SD Gothic Neo", sans-serif;
       color:var(--ink);
       background:
         radial-gradient(900px 520px at 12% 6%, rgba(113,240,218,.35) 0%, transparent 62%),
         radial-gradient(780px 480px at 100% 20%, rgba(139,215,255,.35) 0%, transparent 56%),
         var(--bg);
     }
-    .layout{display:grid;grid-template-columns:264px 1fr;min-height:100vh}
+
+    .layout{
+      display:grid;
+      grid-template-columns: 264px 1fr;
+      min-height:100vh;
+    }
+
+    /* Sidebar */
     aside{
-      background:rgba(255,255,255,.88);backdrop-filter:blur(10px);
-      border-right:1px solid rgba(219,234,254,.9);
-      padding:18px 14px;position:sticky;top:0;height:100vh
+      background: rgba(255,255,255,.88);
+      backdrop-filter: blur(10px);
+      border-right: 1px solid rgba(219,234,254,.9);
+      padding: 18px 14px;
+      position: sticky;
+      top:0;
+      height:100vh;
     }
-    .brand{display:flex;align-items:center;gap:10px;margin:6px 6px 18px;user-select:none}
+
+    .brand{
+      display:flex; align-items:center; gap:10px;
+      margin: 6px 6px 18px;
+      user-select:none;
+    }
     .logo{
-      width:40px;height:40px;border-radius:16px;display:grid;place-items:center;
-      font-weight:900;color:#073b3a;
-      background:linear-gradient(135deg, rgba(113,240,218,.9), rgba(139,215,255,.9));
-      box-shadow:0 12px 26px rgba(15,23,42,.12);border:1px solid rgba(15,23,42,.06)
+      width:40px; height:40px;
+      border-radius: 16px;
+      display:grid; place-items:center;
+      font-weight:900;
+      letter-spacing:-.4px;
+      color:#073b3a;
+      background:
+        linear-gradient(135deg, rgba(113,240,218,.9), rgba(139,215,255,.9));
+      box-shadow: 0 12px 26px rgba(15,23,42,.12);
+      border: 1px solid rgba(15,23,42,.06);
     }
-    nav{display:flex;flex-direction:column;gap:8px;margin-top:10px}
+    .brand-title{
+      display:flex; flex-direction:column; line-height:1.08;
+    }
+    .brand-title b{
+      font-size:14px;
+      letter-spacing:-.2px;
+    }
+    .brand-title span{
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    nav{ display:flex; flex-direction:column; gap:8px; margin-top:10px; }
     nav a{
-      text-decoration:none;color:var(--ink);padding:10px 12px;border-radius:16px;
-      border:1px solid transparent;display:flex;align-items:center;gap:10px
+      text-decoration:none;
+      color:var(--ink);
+      padding:10px 12px;
+      border-radius: 16px;
+      border:1px solid transparent;
+      display:flex; align-items:center; gap:10px;
     }
-    nav a:hover{background:#f1fbff}
+    nav a:hover{ background:#f1fbff; }
     nav a.active{
-      background:linear-gradient(135deg, rgba(113,240,218,.22), rgba(139,215,255,.16));
-      border-color:rgba(113,240,218,.40);font-weight:900
+      background:
+        linear-gradient(135deg, rgba(113,240,218,.22), rgba(139,215,255,.16));
+      border-color: rgba(113,240,218,.40);
+      font-weight:900;
     }
+
     .sidebar-footer{
-      position:absolute;left:14px;right:14px;bottom:14px;
-      border-top:1px solid rgba(219,234,254,.9);padding-top:12px;
-      display:flex;justify-content:space-between;align-items:center;gap:12px;
-      font-size:12px;color:var(--muted)
+      position:absolute;
+      left:14px; right:14px; bottom:14px;
+      border-top: 1px solid rgba(219,234,254,.9);
+      padding-top: 12px;
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:12px;
+      font-size:12px;
+      color:var(--muted);
     }
     .gear{
-      width:34px;height:30px;border-radius:999px;border:1px solid rgba(15,23,42,.10);
-      background:#fff;cursor:pointer;display:grid;place-items:center;
-      box-shadow:0 10px 20px rgba(15,23,42,.06)
+      width:34px; height:30px;
+      border-radius: 999px;
+      border:1px solid rgba(15,23,42,.10);
+      background: #ffffff;
+      cursor:pointer;
+      display:grid; place-items:center;
+      box-shadow: 0 10px 20px rgba(15,23,42,.06);
     }
     .gear:hover{
-      background:linear-gradient(135deg, rgba(113,240,218,.20), rgba(139,215,255,.16));
-      border-color:rgba(113,240,218,.45)
+      background: linear-gradient(135deg, rgba(113,240,218,.20), rgba(139,215,255,.16));
+      border-color: rgba(113,240,218,.45);
     }
-    main{padding:26px 22px}
-    .container{max-width:980px;margin:0 auto}
-    header{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
-    header h1{margin:0;font-size:30px;letter-spacing:-.7px}
-    header p{margin:0;color:var(--muted);line-height:1.7}
-    .page{display:none;animation:pop .18s ease-out}
-    .page.active{display:block}
-    @keyframes pop{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
-    .cards{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-    .card{background:var(--panel);border:1px solid rgba(219,234,254,.9);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+
+    /* Main */
+    main{ padding: 26px 22px; }
+    .container{ max-width: 980px; margin: 0 auto; }
+
+    header{
+      display:flex; flex-direction:column; gap:6px;
+      margin-bottom:16px;
+    }
+    header h1{
+      margin:0;
+      font-size:30px;
+      letter-spacing:-.7px;
+    }
+    header p{
+      margin:0;
+      color:var(--muted);
+      line-height:1.7;
+    }
+
+    .page{ display:none; animation: pop .18s ease-out; }
+    .page.active{ display:block; }
+    @keyframes pop{
+      from{ opacity:0; transform: translateY(8px); }
+      to{ opacity:1; transform: translateY(0); }
+    }
+
+    /* Kitsch clean cards */
+    .cards{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:14px;
+    }
+    .card{
+      background: var(--panel);
+      border: 1px solid rgba(219,234,254,.9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
     .ribbon{
-      padding:14px 16px;display:flex;justify-content:space-between;align-items:center;gap:10px;
-      background:linear-gradient(135deg, rgba(113,240,218,.30), rgba(139,215,255,.16));
-      border-bottom:1px solid rgba(219,234,254,.9)
+      padding: 14px 16px;
+      display:flex; justify-content:space-between; align-items:center; gap:10px;
+      background:
+        linear-gradient(135deg, rgba(113,240,218,.30), rgba(139,215,255,.16));
+      border-bottom: 1px solid rgba(219,234,254,.9);
     }
-    .badge{font-size:11px;padding:6px 10px;border-radius:999px;border:1px solid rgba(15,23,42,.12);background:rgba(255,255,255,.78);white-space:nowrap}
-    .body{padding:14px 16px 16px;line-height:1.8}
-    .body ul{margin:0;padding-left:18px}
-    .hint{margin-top:10px;font-size:12px;color:var(--muted)}
-    .panel{background:var(--panel);border:1px solid rgba(219,234,254,.9);border-radius:var(--radius);box-shadow:var(--shadow);padding:14px}
-    .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;margin-bottom:12px}
+    .ribbon b{ letter-spacing:-.2px; display:flex; align-items:center; gap:8px; }
+    .badge{
+      font-size:11px;
+      padding:6px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(15,23,42,.12);
+      background: rgba(255,255,255,.78);
+      white-space:nowrap;
+    }
+    .body{
+      padding: 14px 16px 16px;
+      line-height:1.8;
+    }
+    .body ul{ margin:0; padding-left: 18px; }
+    .hint{
+      margin-top:10px;
+      font-size:12px;
+      color:var(--muted);
+    }
+
+    /* Panels */
+    .panel{
+      background: var(--panel);
+      border: 1px solid rgba(219,234,254,.9);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 14px;
+    }
+    .toolbar{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      align-items:center;
+      justify-content:space-between;
+      margin-bottom: 12px;
+    }
     .search{
-      flex:1 1 320px;display:flex;align-items:center;gap:10px;
-      padding:10px 12px;border-radius:16px;border:1px solid rgba(15,23,42,.10);
-      background:linear-gradient(180deg,#fff,#fbfeff)
+      flex: 1 1 320px;
+      display:flex;
+      align-items:center;
+      gap:10px;
+      padding: 10px 12px;
+      border-radius: 16px;
+      border:1px solid rgba(15,23,42,.10);
+      background: linear-gradient(180deg, #fff, #fbfeff);
     }
-    .search input{border:none;outline:none;width:100%;font-size:14px;background:transparent;color:var(--ink)}
-    .meta{color:var(--muted);font-size:12px;white-space:nowrap}
-    .list{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .search input{
+      border:none;
+      outline:none;
+      width:100%;
+      font-size:14px;
+      background:transparent;
+      color:var(--ink);
+    }
+    .meta{
+      color: var(--muted);
+      font-size:12px;
+      white-space:nowrap;
+    }
+
+    /* List */
+    .list{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
     .song{
       border:1px solid rgba(15,23,42,.10);
-      background:linear-gradient(135deg, rgba(113,240,218,.12), rgba(139,215,255,.08));
-      border-radius:16px;padding:12px 12px;display:flex;justify-content:space-between;gap:10px
+      background:
+        linear-gradient(135deg, rgba(113,240,218,.12), rgba(139,215,255,.08));
+      border-radius: 16px;
+      padding: 12px 12px;
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:10px;
     }
-    .song b{display:block;letter-spacing:-.2px}
-    .song span{display:block;color:var(--muted);font-size:12px;margin-top:3px}
-    .admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:12px}
-    .form{border:1px solid rgba(15,23,42,.10);background:linear-gradient(180deg,#fff,#fbfeff);border-radius:var(--radius);padding:14px}
-    .field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}
-    label{font-size:12px;color:var(--muted)}
-    input[type="text"],input[type="password"]{padding:11px 12px;border-radius:16px;border:1px solid rgba(15,23,42,.12);outline:none;font-size:14px;background:#fff;color:var(--ink)}
-    .btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-    button{border:none;cursor:pointer;padding:10px 12px;border-radius:16px;font-weight:800;letter-spacing:-.2px;border:1px solid rgba(15,23,42,.10);background:#fff}
+    .song b{
+      display:block;
+      letter-spacing:-.2px;
+    }
+    .song span{
+      display:block;
+      color:var(--muted);
+      font-size:12px;
+      margin-top:3px;
+    }
+
+    /* Admin */
+    .admin-grid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+      margin-top: 12px;
+    }
+    .form{
+      border:1px solid rgba(15,23,42,.10);
+      background: linear-gradient(180deg, #fff, #fbfeff);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+    .field{
+      display:flex; flex-direction:column; gap:6px;
+      margin-bottom: 10px;
+    }
+    label{
+      font-size:12px;
+      color:var(--muted);
+    }
+    input[type="text"], input[type="password"]{
+      padding: 11px 12px;
+      border-radius: 16px;
+      border:1px solid rgba(15,23,42,.12);
+      outline:none;
+      font-size:14px;
+      background:#fff;
+      color:var(--ink);
+    }
+    .btnrow{ display:flex; gap:8px; flex-wrap:wrap; margin-top: 10px; }
+    button{
+      border:none;
+      cursor:pointer;
+      padding: 10px 12px;
+      border-radius: 16px;
+      font-weight:800;
+      letter-spacing:-.2px;
+      border:1px solid rgba(15,23,42,.10);
+      background:#fff;
+    }
     button.primary{
-      background:linear-gradient(135deg, rgba(113,240,218,.85), rgba(139,215,255,.75));
-      color:#073b3a;border-color:rgba(15,23,42,.06);box-shadow:0 12px 22px rgba(15,23,42,.10)
+      background: linear-gradient(135deg, rgba(113,240,218,.85), rgba(139,215,255,.75));
+      color:#073b3a;
+      border-color: rgba(15,23,42,.06);
+      box-shadow: 0 12px 22px rgba(15,23,42,.10);
     }
-    button:disabled{opacity:.55;cursor:not-allowed}
-    .tiny{font-size:12px;color:var(--muted);line-height:1.6}
-    .admin-list .song{background:#fff}
-    .del{font-size:12px;padding:8px 10px;border-radius:999px;border:1px solid rgba(239,68,68,.28);color:#b91c1c;background:rgba(239,68,68,.06);cursor:pointer;white-space:nowrap}
-    .modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.35);display:none;align-items:center;justify-content:center;padding:18px;z-index:50}
-    .modal{width:min(420px,100%);background:#fff;border-radius:22px;border:1px solid rgba(15,23,42,.10);box-shadow:0 30px 80px rgba(15,23,42,.25);overflow:hidden}
-    .modal-head{padding:14px 16px;background:linear-gradient(135deg, rgba(113,240,218,.30), rgba(139,215,255,.20));border-bottom:1px solid rgba(219,234,254,.9);display:flex;justify-content:space-between;align-items:center;gap:10px}
-    .x{width:34px;height:30px;border-radius:999px;border:1px solid rgba(15,23,42,.10);background:#fff;cursor:pointer;display:grid;place-items:center}
-    .modal-body{padding:14px 16px 16px}
-    .warn{margin-top:8px;font-size:12px;color:#b91c1c;display:none}
-    @media (max-width:900px){
-      .layout{grid-template-columns:1fr}
-      aside{position:relative;height:auto}
-      .sidebar-footer{position:relative}
-      .cards,.list,.admin-grid{grid-template-columns:1fr}
+    button.danger{
+      background: #fff;
+      border-color: rgba(239,68,68,.35);
+      color: #b91c1c;
+    }
+    button:disabled{ opacity:.55; cursor:not-allowed; }
+
+    .tiny{
+      font-size:12px;
+      color:var(--muted);
+      line-height:1.6;
+    }
+
+    .admin-list .song{
+      background: #fff;
+    }
+    .del{
+      font-size:12px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(239,68,68,.28);
+      color:#b91c1c;
+      background: rgba(239,68,68,.06);
+      cursor:pointer;
+      white-space:nowrap;
+    }
+
+    /* Modal */
+    .modal-backdrop{
+      position:fixed; inset:0;
+      background: rgba(15,23,42,.35);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      z-index: 50;
+    }
+    .modal{
+      width:min(420px, 100%);
+      background:#fff;
+      border-radius: 22px;
+      border:1px solid rgba(15,23,42,.10);
+      box-shadow: 0 30px 80px rgba(15,23,42,.25);
+      overflow:hidden;
+    }
+    .modal-head{
+      padding: 14px 16px;
+      background: linear-gradient(135deg, rgba(113,240,218,.30), rgba(139,215,255,.20));
+      border-bottom:1px solid rgba(219,234,254,.9);
+      display:flex; justify-content:space-between; align-items:center;
+      gap:10px;
+    }
+    .modal-head b{ letter-spacing:-.2px; }
+    .x{
+      width:34px; height:30px;
+      border-radius: 999px;
+      border:1px solid rgba(15,23,42,.10);
+      background:#fff;
+      cursor:pointer;
+      display:grid; place-items:center;
+    }
+    .modal-body{ padding: 14px 16px 16px; }
+    .warn{
+      margin-top:8px;
+      font-size:12px;
+      color:#b91c1c;
+      display:none;
+    }
+
+    @media (max-width: 900px){
+      .layout{ grid-template-columns: 1fr; }
+      aside{ position:relative; height:auto; }
+      .sidebar-footer{ position:relative; }
+      .cards, .list, .admin-grid{ grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -128,9 +385,9 @@
     <aside>
       <div class="brand">
         <div class="logo">♪</div>
-        <div>
-          <div style="font-weight:900;letter-spacing:-.2px;">심하 노래책</div>
-          <div style="font-size:12px;color:var(--muted);">Sky Mint Kitsch</div>
+        <div class="brand-title">
+          <b>노래책</b>
+          <span>Sky Mint Kitsch</span>
         </div>
       </div>
 
@@ -138,11 +395,12 @@
         <a href="#guide" class="navlink active" data-page="guide">🧾 이용안내</a>
         <a href="#songs" class="navlink" data-page="songs">📚 신청가능목록</a>
         <a href="#mission" class="navlink" data-page="mission">🎯 미션곡</a>
+        <!-- 어드민은 숨김 페이지: 로그인 후에만 이동 가능 -->
         <a href="#admin" class="navlink" data-page="admin" id="adminNav" style="display:none;">⚙︎ 어드민</a>
       </nav>
 
       <div class="sidebar-footer">
-        <span>© 심하</span>
+        <span>© 채널명</span>
         <button class="gear" id="openAdmin" title="어드민">⚙︎</button>
       </div>
     </aside>
@@ -150,6 +408,7 @@
     <main>
       <div class="container">
 
+        <!-- 이용안내 -->
         <section class="page active" id="guide">
           <header>
             <h1>이용안내</h1>
@@ -189,6 +448,7 @@
           </div>
         </section>
 
+        <!-- 신청가능목록 -->
         <section class="page" id="songs">
           <header>
             <h1>신청가능목록</h1>
@@ -197,14 +457,21 @@
 
           <div class="panel">
             <div class="toolbar">
-              <div class="search">🔎 <input id="q" type="text" placeholder="가수 또는 제목 검색…" /></div>
+              <div class="search">
+                🔎 <input id="q" type="text" placeholder="가수 또는 제목 검색…" />
+              </div>
               <div class="meta"><span id="count">0</span>곡</div>
             </div>
+
             <div class="list" id="songList"></div>
-            <p class="tiny" style="margin-top:12px;">이 목록은 Google Sheets에 저장됩니다. (어느 PC에서 보든 동일)</p>
+
+            <p class="tiny" style="margin-top:12px;">
+              ⚠️ 이 페이지의 곡 목록은 이 브라우저에 저장됩니다(localStorage). 여러 기기/여러 PC에서 공유하려면 서버(예: Firebase/Supabase)가 필요해요.
+            </p>
           </div>
         </section>
 
+        <!-- 미션곡 -->
         <section class="page" id="mission">
           <header>
             <h1>미션곡</h1>
@@ -224,13 +491,14 @@
                     <li>방송 흐름/컨디션에 따라 스킵될 수 있어요.</li>
                     <li>미션 성공 보상은 방송 공지에 따라 달라요.</li>
                   </ul>
-                  <div class="hint">원하면 미션곡도 시트로 분리 관리로 확장 가능!</div>
+                  <div class="hint">원하면 미션곡도 어드민에서 따로 관리하는 버전으로 확장 가능!</div>
                 </div>
               </article>
             </div>
           </div>
         </section>
 
+        <!-- 어드민 -->
         <section class="page" id="admin">
           <header>
             <h1>어드민</h1>
@@ -253,7 +521,16 @@
                 <button id="logoutBtn">로그아웃</button>
               </div>
 
-              <p class="tiny" style="margin-top:12px;">✨ 깔끔 룰: 입력은 <b>가수명 / 노래제목</b>만.</p>
+              <p class="tiny" style="margin-top:12px;">
+                ✨ 깔끔 룰: 입력은 <b>가수명 / 노래제목</b>만. (키/멘트/가격표 같은 건 일부러 안 넣었어요)
+              </p>
+
+              <hr style="border:none;border-top:1px solid rgba(219,234,254,.9); margin:14px 0;">
+
+              <p class="tiny">
+                🔐 비번 변경: 이 파일에서 <code>ADMIN_PASS</code> 값을 바꾸면 됩니다.<br>
+                (현재는 예시로 <b>simha0310</b>)
+              </p>
             </div>
 
             <div class="panel admin-list">
@@ -270,6 +547,7 @@
     </main>
   </div>
 
+  <!-- Admin Login Modal -->
   <div class="modal-backdrop" id="modalBg">
     <div class="modal">
       <div class="modal-head">
@@ -278,317 +556,256 @@
       </div>
       <div class="modal-body">
         <div class="field">
-          <label>비밀번호(토큰)</label>
-          <input id="pass" type="password" placeholder="토큰 입력" />
+          <label>비밀번호</label>
+          <input id="pass" type="password" placeholder="비밀번호 입력" />
         </div>
         <div class="btnrow">
           <button class="primary" id="loginBtn">접속</button>
           <button id="cancelBtn">취소</button>
         </div>
-        <div class="warn" id="warn">토큰이 틀렸어요.</div>
-        <p class="tiny" style="margin-top:10px;">* 토큰이 맞아야 어드민 진입 가능 (틀리면 절대 입장 불가)</p>
+        <div class="warn" id="warn">비밀번호가 틀렸어요.</div>
+        <p class="tiny" style="margin-top:10px;">
+          * 이 로그인은 “간단 접근용”이에요. 파일만 있으면 코드로 비번이 보이기 때문에, 진짜 보안이 필요하면 서버형 로그인으로 바꿔야 해요.
+        </p>
       </div>
     </div>
   </div>
 
   <script>
-    // ✅ 같은 웹앱(/exec)으로 API 호출
-    const BASE_URL = (() => {
-      const u = new URL(location.href);
-      u.search = "";
-      u.hash = "";
-      return u.toString();
-    })();
+    /* =========================
+       Settings
+    ========================= */
+    const STORAGE_KEY = "songbook_songs_v1";
+    const AUTH_KEY = "songbook_admin_authed_v1";
+    const ADMIN_PASS = "1234"; // ← 꼭 바꾸기!
 
-    const AUTH_SESSION_KEY = "songbook_admin_token_session_v1";
-    const AUTH_OK_KEY = "songbook_admin_ok_v1";
+    /* =========================
+       Helpers
+    ========================= */
     const $ = (id) => document.getElementById(id);
 
-    function norm(s){ return (s||"").toString().trim().replace(/\s+/g," "); }
-    function keyOf(a,t){ return `${norm(a).toLowerCase()}||${norm(t).toLowerCase()}`; }
-    function escapeHtml(str){
-      return (str ?? "").toString()
-        .replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;").replaceAll("'","&#039;");
+    function loadSongs(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+      }catch{
+        return [];
+      }
     }
 
-    function getToken(){ return sessionStorage.getItem(AUTH_SESSION_KEY) || ""; }
-    function setToken(t){
-      if(t) sessionStorage.setItem(AUTH_SESSION_KEY, t);
-      else sessionStorage.removeItem(AUTH_SESSION_KEY);
-      if(!t) sessionStorage.removeItem(AUTH_OK_KEY);
-      updateAdminVisibility();
-    }
-    function isAuthed(){
-      return sessionStorage.getItem(AUTH_OK_KEY) === "1" && !!getToken();
+    function saveSongs(songs){
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(songs));
     }
 
-    // ✅ GET(JSON) : list/auth 안정형
-    async function apiGet(action, params={}){
-      const qs = new URLSearchParams({ action, ...params, _: Date.now() }).toString();
-      const url = `${BASE_URL}?${qs}`;
-      const text = await fetch(url, { method:"GET", cache:"no-store" }).then(r => r.text());
-      try { return JSON.parse(text); }
-      catch { return { ok:false, error:"bad_json_response", raw:text }; }
+    function norm(s){
+      return (s || "").toString().trim();
     }
-
-    // ✅ POST(JSON) : add/delete
-    async function apiPost(action, payload={}){
-      const res = await fetch(BASE_URL, {
-        method: "POST",
-        headers: { "Content-Type":"text/plain;charset=utf-8" },
-        body: JSON.stringify({ action, ...payload })
-      });
-      const text = await res.text();
-      try { return JSON.parse(text); }
-      catch { return { ok:false, error:"bad_json_response", raw:text }; }
-    }
-
-    async function listSongs(){
-      const data = await apiGet("list");
-      if(!data.ok) throw new Error(data.error || "list_failed");
-      return data.songs || [];
-    }
-    async function authToken(token){
-      const data = await apiGet("auth", { token });
-      return !!(data && data.ok);
-    }
-    async function addSong(artist, title){
-      const data = await apiPost("add", { token:getToken(), artist, title });
-      if(!data.ok) throw new Error(data.error || "add_failed");
-      return data.id;
-    }
-    async function deleteSong(id){
-      const data = await apiPost("delete", { token:getToken(), id });
-      if(!data.ok) throw new Error(data.error || "delete_failed");
-      return true;
-    }
-
-    let SONGS = [];
 
     function renderSongs(){
       const q = norm($("q")?.value).toLowerCase();
-      const filtered = SONGS.filter(x=>{
-        const a=(x.artist||"").toLowerCase();
-        const t=(x.title||"").toLowerCase();
+      const songs = loadSongs();
+
+      const filtered = songs.filter(x => {
+        const a = (x.artist || "").toLowerCase();
+        const t = (x.title || "").toLowerCase();
         return !q || a.includes(q) || t.includes(q);
       });
 
       $("count").textContent = filtered.length;
 
       const list = $("songList");
-      list.innerHTML = filtered.length ? "" :
-        `<div class="tiny" style="padding:10px;color:var(--muted);">아직 곡이 없어요. ⚙︎ 어드민에서 추가해보세요.</div>`;
+      list.innerHTML = filtered.length ? "" : `<div class="tiny" style="padding:10px;color:var(--muted);">아직 곡이 없어요. ⚙︎ 어드민에서 추가해보세요.</div>`;
 
-      filtered.forEach(x=>{
-        const div=document.createElement("div");
-        div.className="song";
-        div.innerHTML=`
+      filtered.forEach((x) => {
+        const div = document.createElement("div");
+        div.className = "song";
+        div.innerHTML = `
           <div>
             <b>${escapeHtml(x.title)}</b>
             <span>${escapeHtml(x.artist)}</span>
           </div>
-          <span class="badge">가수-제목</span>
+          <span class="badge" title="표기 형식">가수-제목</span>
         `;
         list.appendChild(div);
       });
     }
 
     function renderAdminList(){
-      $("adminCount").textContent = SONGS.length;
+      const songs = loadSongs();
+      $("adminCount").textContent = songs.length;
 
       const list = $("adminList");
-      list.innerHTML = SONGS.length ? "" :
-        `<div class="tiny" style="padding:10px;color:var(--muted);">아직 등록된 곡이 없어요.</div>`;
+      list.innerHTML = songs.length ? "" : `<div class="tiny" style="padding:10px;color:var(--muted);">아직 등록된 곡이 없어요.</div>`;
 
-      SONGS.forEach(x=>{
-        const div=document.createElement("div");
-        div.className="song";
-        div.innerHTML=`
+      songs.forEach((x, idx) => {
+        const div = document.createElement("div");
+        div.className = "song";
+        div.innerHTML = `
           <div>
             <b>${escapeHtml(x.title)}</b>
             <span>${escapeHtml(x.artist)}</span>
           </div>
-          <button class="del" data-id="${escapeHtml(x.id)}">삭제</button>
+          <button class="del" data-idx="${idx}">삭제</button>
         `;
         list.appendChild(div);
       });
 
-      list.querySelectorAll(".del").forEach(btn=>{
-        btn.addEventListener("click", async ()=>{
-          const id=btn.dataset.id;
-          btn.disabled=true;
-          try{
-            await deleteSong(id);
-            await refreshSongs();
-          }catch(e){
-            if(e.message==="unauthorized"){
-              alert("권한이 없어요. 다시 로그인해주세요.");
-              sessionStorage.removeItem(AUTH_OK_KEY);
-              setToken("");
-              show("guide");
-              openModal();
-              return;
-            }
-            alert("삭제 실패: "+e.message);
-          }finally{
-            btn.disabled=false;
-          }
+      list.querySelectorAll(".del").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const i = Number(btn.dataset.idx);
+          const songs2 = loadSongs();
+          songs2.splice(i, 1);
+          saveSongs(songs2);
+          renderAdminList();
+          renderSongs();
         });
       });
     }
 
-    async function refreshSongs(){
-      SONGS = await listSongs();
-      renderSongs();
-      if(isAuthed()) renderAdminList();
+    function escapeHtml(str){
+      return (str ?? "").toString()
+        .replaceAll("&","&amp;")
+        .replaceAll("<","&lt;")
+        .replaceAll(">","&gt;")
+        .replaceAll('"',"&quot;")
+        .replaceAll("'","&#039;");
     }
 
-    const links=document.querySelectorAll(".navlink");
-    const pages=document.querySelectorAll(".page");
+    function setAuthed(v){
+      localStorage.setItem(AUTH_KEY, v ? "1" : "0");
+      updateAdminVisibility();
+    }
+
+    function isAuthed(){
+      return localStorage.getItem(AUTH_KEY) === "1";
+    }
+
+    function updateAdminVisibility(){
+      $("adminNav").style.display = isAuthed() ? "" : "none";
+    }
+
+    /* =========================
+       Router (hash pages)
+    ========================= */
+    const links = document.querySelectorAll(".navlink");
+    const pages = document.querySelectorAll(".page");
 
     function show(pageId){
-      pages.forEach(p=>p.classList.toggle("active", p.id===pageId));
-      links.forEach(a=>a.classList.toggle("active", a.dataset.page===pageId));
-      history.replaceState(null,"","#"+pageId);
+      pages.forEach(p => p.classList.toggle("active", p.id === pageId));
+      links.forEach(a => a.classList.toggle("active", a.dataset.page === pageId));
+      history.replaceState(null, "", "#" + pageId);
 
-      if(pageId==="songs") refreshSongs().catch(()=>{});
-      if(pageId==="admin"){
+      // page-specific renders
+      if(pageId === "songs") renderSongs();
+      if(pageId === "admin"){
         if(!isAuthed()){
+          // not allowed -> bounce
           show("guide");
           openModal();
           return;
         }
-        refreshSongs().then(renderAdminList).catch(()=>{});
+        renderAdminList();
       }
     }
 
-    links.forEach(a=>{
-      a.addEventListener("click",(e)=>{
+    links.forEach(a => {
+      a.addEventListener("click", (e) => {
         e.preventDefault();
-        const target=a.dataset.page;
-        if(target==="admin" && !isAuthed()){
-          openModal(); return;
+        const target = a.dataset.page;
+        if(target === "admin" && !isAuthed()){
+          openModal();
+          return;
         }
         show(target);
       });
     });
 
-    $("q")?.addEventListener("input", renderSongs);
+    // Initial
+    updateAdminVisibility();
+    const initial = (location.hash || "#guide").replace("#","");
+    show(["guide","songs","mission","admin"].includes(initial) ? initial : "guide");
 
-    $("addBtn")?.addEventListener("click", async ()=>{
-      const artist=norm($("artist").value);
-      const title=norm($("title").value);
-      if(!artist || !title){ alert("가수명과 노래제목을 모두 입력해주세요!"); return; }
+    /* =========================
+       Search
+    ========================= */
+    $("q").addEventListener("input", renderSongs);
 
-      const k=keyOf(artist,title);
-      if(SONGS.some(s=>keyOf(s.artist,s.title)===k)){
-        alert("이미 목록에 있는 곡이에요!"); return;
+    /* =========================
+       Admin actions
+    ========================= */
+    $("addBtn").addEventListener("click", () => {
+      const artist = norm($("artist").value);
+      const title  = norm($("title").value);
+
+      if(!artist || !title){
+        alert("가수명과 노래제목을 모두 입력해주세요!");
+        return;
       }
 
-      $("addBtn").disabled=true;
-      try{
-        await addSong(artist,title);
-        $("artist").value=""; $("title").value="";
-        $("artist").focus();
-        await refreshSongs();
-      }catch(e){
-        if(e.message==="duplicate") alert("이미 목록에 있는 곡이에요!");
-        else if(e.message==="unauthorized"){
-          alert("어드민 권한이 없어요. 다시 로그인해주세요.");
-          sessionStorage.removeItem(AUTH_OK_KEY);
-          setToken("");
-          show("guide"); openModal();
-        }else alert("추가 실패: "+e.message);
-      }finally{
-        $("addBtn").disabled=false;
-      }
+      const songs = loadSongs();
+      songs.push({ artist, title });
+
+      // Optional: 깔끔하게 정렬 (가수 > 제목)
+      songs.sort((a,b) => {
+        const aa = (a.artist||"").localeCompare(b.artist||"", "ko");
+        if(aa !== 0) return aa;
+        return (a.title||"").localeCompare(b.title||"", "ko");
+      });
+
+      saveSongs(songs);
+
+      $("artist").value = "";
+      $("title").value = "";
+      $("artist").focus();
+
+      renderAdminList();
+      renderSongs();
     });
 
-    $("logoutBtn")?.addEventListener("click", ()=>{
-      sessionStorage.removeItem(AUTH_OK_KEY);
-      setToken("");
+    $("logoutBtn").addEventListener("click", () => {
+      setAuthed(false);
       show("guide");
     });
 
-    function updateAdminVisibility(){
-      const adminNav=document.getElementById("adminNav");
-      if(adminNav) adminNav.style.display = isAuthed() ? "" : "none";
-    }
+    /* =========================
+       Modal login
+    ========================= */
+    const modalBg = $("modalBg");
+    const warn = $("warn");
 
-    const modalBg=$("modalBg");
-    const warn=$("warn");
     function openModal(){
-      warn.style.display="none";
-      $("pass").value="";
-      modalBg.style.display="flex";
-      setTimeout(()=>$("pass").focus(),0);
+      warn.style.display = "none";
+      $("pass").value = "";
+      modalBg.style.display = "flex";
+      setTimeout(() => $("pass").focus(), 0);
     }
-    function closeModal(){ modalBg.style.display="none"; }
+    function closeModal(){
+      modalBg.style.display = "none";
+    }
 
     $("openAdmin").addEventListener("click", openModal);
     $("closeModal").addEventListener("click", closeModal);
     $("cancelBtn").addEventListener("click", closeModal);
-    modalBg.addEventListener("click",(e)=>{ if(e.target===modalBg) closeModal(); });
-
-    // ✅ 토큰 검증: 맞아야만 ok 플래그 세팅 + 어드민 진입
-    $("loginBtn").addEventListener("click", async ()=>{
-      const p=$("pass").value.trim();
-      if(!p){ warn.style.display="block"; return; }
-
-      $("loginBtn").disabled=true;
-      warn.style.display="none";
-
-      try{
-        const ok = await authToken(p);
-        if(ok){
-          setToken(p);
-          sessionStorage.setItem(AUTH_OK_KEY,"1");
-          updateAdminVisibility();
-          closeModal();
-          show("admin");
-        }else{
-          warn.style.display="block";
-          sessionStorage.removeItem(AUTH_OK_KEY);
-          setToken("");
-        }
-      }catch(err){
-        warn.style.display="block";
-        console.log("auth error:", err);
-        alert("로그인 확인 실패! (배포/권한/네트워크 확인)");
-      }finally{
-        $("loginBtn").disabled=false;
-      }
+    modalBg.addEventListener("click", (e) => {
+      if(e.target === modalBg) closeModal();
     });
 
-    $("pass").addEventListener("keydown",(e)=>{
-      if(e.key==="Enter") $("loginBtn").click();
-      if(e.key==="Escape") closeModal();
-    });
-
-    // ✅ 부팅
-    updateAdminVisibility();
-    const initial=(location.hash||"#guide").replace("#","");
-    show(["guide","songs","mission","admin"].includes(initial) ? initial : "guide");
-    refreshSongs().catch(()=>{});
-
-    // ✅ 새로고침/재접속 시: 토큰이 저장돼있어도 "진짜로 맞는지" 재검증
-    (async function validateOnBoot(){
-      const t = getToken();
-      if(!t) return;
-      const ok = await authToken(t).catch(()=>false);
-      if(ok){
-        sessionStorage.setItem(AUTH_OK_KEY,"1");
+    $("loginBtn").addEventListener("click", () => {
+      const p = $("pass").value;
+      if(p === ADMIN_PASS){
+        setAuthed(true);
+        closeModal();
+        show("admin");
       }else{
-        sessionStorage.removeItem(AUTH_OK_KEY);
-        setToken("");
+        warn.style.display = "block";
       }
-      updateAdminVisibility();
-      if(location.hash === "#admin" && !isAuthed()){
-        show("guide");
-        openModal();
-      }
-    })();
+    });
+
+    $("pass").addEventListener("keydown", (e) => {
+      if(e.key === "Enter") $("loginBtn").click();
+      if(e.key === "Escape") closeModal();
+    });
   </script>
 </body>
 </html>
