@@ -330,6 +330,30 @@
       white-space:nowrap;
     }
 
+
+    .queueAdd{
+      font-size:12px;
+      padding: 8px 10px;
+      border-radius: 999px;
+      border:1px solid rgba(113,240,218,.55);
+      background: rgba(113,240,218,.16);
+      color:#064e4b;
+      cursor:pointer;
+      white-space:nowrap;
+      font-weight:900;
+    }
+    .queueAdd:hover{
+      background: rgba(113,240,218,.26);
+      border-color: rgba(113,240,218,.75);
+    }
+
+    /* OBS 전용: 사이드바 숨기고 한 화면만 */
+    body.obs .layout{ grid-template-columns: 1fr; }
+    body.obs aside{ display:none; }
+    body.obs main{ padding: 18px; }
+    body.obs .container{ max-width: 1100px; }
+
+
     /* Modal */
     .modal-backdrop{
       position:fixed; inset:0;
@@ -405,6 +429,7 @@
       <nav>
         <a href="#guide" class="navlink active" data-page="guide">🧾 이용안내</a>
         <a href="#songs" class="navlink" data-page="songs">📚 노래목록</a>
+        <a href="#queue" class="navlink" data-page="queue">💎대기열</a>
         <a href="#mission" class="navlink" data-page="mission">🎯 미션곡</a>
         <!-- 어드민은 숨김 페이지: 로그인 후에만 이동 가능 -->
         <a href="#admin" class="navlink" data-page="admin" id="adminNav" style="display:none;">⚙︎ 어드민</a>
@@ -501,6 +526,33 @@
             </p>
           </div>
         </section>
+
+
+        <!-- 대기열 -->
+        <section class="page" id="queue">
+          <header>
+            <h1>💎대기열</h1>
+            <p>노래목록에서 <b>신청</b> 버튼을 누르면 여기에 선착순으로 쌓여요.</p>
+          </header>
+
+          <div class="panel">
+            <div class="toolbar">
+              <b style="letter-spacing:-.2px;">현재 대기열</b>
+              <div class="meta"><span id="queueCount">0</span>곡</div>
+            </div>
+
+            <div class="list" id="queueList"></div>
+
+            <div class="btnrow" id="queueAdminRow" style="margin-top:12px; display:none;">
+              <button class="danger" id="clearQueueBtn" title="대기열 전체 비우기">대기열 비우기</button>
+            </div>
+
+            <p class="tiny" style="margin-top:12px;">
+              ※ 대기열은 이 브라우저에 저장돼요. (OBS용 화면은 아래 링크 참고!)
+            </p>
+          </div>
+        </section>
+
 
         <!-- 미션곡 -->
         <section class="page" id="mission">
@@ -615,6 +667,7 @@
     const STORAGE_KEY = "songbook_songs_v1"; // (예전) 호환용: 어드민 임시 목록
     const DRAFT_KEY   = STORAGE_KEY;      // 현재 어드민이 편집하는 목록(브라우저 로컬)
     const SHARED_URL  = "songs.json";     // 모두가 같이 보는 공개 목록
+    const QUEUE_KEY   = "songbook_queue_v1"; // 대기열(브라우저 로컬)
     const AUTH_KEY    = "songbook_admin_authed_v1";
     const ADMIN_PASS  = "simha0506"; // ← 꼭 바꾸기!
 
@@ -641,6 +694,71 @@
     function saveSongs(songs){
       localStorage.setItem(DRAFT_KEY, JSON.stringify(songs));
     }
+
+
+    function loadQueue(){
+      try{
+        const raw = localStorage.getItem(QUEUE_KEY);
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+      }catch{
+        return [];
+      }
+    }
+
+    function saveQueue(queue){
+      localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
+    }
+
+    function addToQueue(song){
+      const queue = loadQueue();
+      queue.push({ artist: song.artist, title: song.title, at: Date.now() });
+      saveQueue(queue);
+      renderQueue();
+      alert("대기열에 추가됐어요! 💎");
+    }
+
+    function renderQueue(){
+      const queue = loadQueue();
+      const list = $("queueList");
+      if(!list || !$("queueCount")) return;
+
+      $("queueCount").textContent = queue.length;
+
+      // 어드민일 때만 '비우기' 버튼 보이기
+      const adminRow = $("queueAdminRow");
+      if(adminRow) adminRow.style.display = isAuthed() ? "" : "none";
+
+      list.innerHTML = queue.length ? "" : `<div class="tiny" style="padding:10px;color:var(--muted);">대기열이 비어있어요. 노래목록에서 신청을 눌러주세요!</div>`;
+
+      queue.forEach((x, idx) => {
+        const div = document.createElement("div");
+        div.className = "song";
+        const left = `
+          <div>
+            <b>${idx+1}. ${escapeHtml(x.title)}</b>
+            <span>${escapeHtml(x.artist)}</span>
+          </div>
+        `;
+        const right = isAuthed() ? `<button class="del" data-idx="${idx}">삭제</button>` : "";
+        div.innerHTML = left + right;
+        list.appendChild(div);
+      });
+
+      // 어드민 삭제
+      if(isAuthed()){
+        list.querySelectorAll(".del").forEach(btn => {
+          btn.addEventListener("click", () => {
+            const i = Number(btn.dataset.idx);
+            const q = loadQueue();
+            q.splice(i, 1);
+            saveQueue(q);
+            renderQueue();
+          });
+        });
+      }
+    }
+
 
     async function loadSharedSongs(){
       // 모두가 같이 보는 "공개 목록" (songs.json)
@@ -704,8 +822,13 @@
             <b>${escapeHtml(x.title)}</b>
             <span>${escapeHtml(x.artist)}</span>
           </div>
+          <button class="queueAdd" title="대기열에 추가">신청</button>
         `;
         list.appendChild(div);
+
+        div.querySelector(".queueAdd")?.addEventListener("click", () => {
+          addToQueue({ artist: x.artist, title: x.title });
+        });
       });
     }
 
@@ -746,7 +869,7 @@
         .replaceAll("&","&amp;")
         .replaceAll("<","&lt;")
         .replaceAll(">","&gt;")
-        .replaceAll('"',"&quot;")
+        .replaceAll('"',"quot;")
         .replaceAll("'","&#039;");
     }
 
@@ -761,6 +884,7 @@
 
     function updateAdminVisibility(){
       $("adminNav").style.display = isAuthed() ? "" : "none";
+      renderQueue();
     }
 
     /* =========================
@@ -776,6 +900,7 @@
 
       // page-specific renders
       if(pageId === "songs") renderSongs();
+      if(pageId === "queue") renderQueue();
       if(pageId === "admin"){
         if(!isAuthed()){
           // not allowed -> bounce
@@ -802,7 +927,15 @@
     // Initial
     updateAdminVisibility();
     const initial = (location.hash || "#guide").replace("#","");
-    show(["guide","songs","mission","admin"].includes(initial) ? initial : "guide");
+    show(["guide","songs","queue","mission","admin"].includes(initial) ? initial : "guide");
+
+    // OBS 전용 화면: 주소에 ?obs=queue 를 붙이면 '대기열'만 크게 띄웁니다
+    const obs = new URLSearchParams(location.search).get("obs");
+    if(obs === "queue"){
+      document.body.classList.add("obs");
+      show("queue");
+    }
+
 
     /* =========================
        Search
@@ -844,6 +977,15 @@
     $("logoutBtn").addEventListener("click", () => {
       setAuthed(false);
       show("guide");
+    });
+
+
+    $("clearQueueBtn")?.addEventListener("click", () => {
+      const ok = confirm("대기열을 전부 비울까요?");
+      if(!ok) return;
+      saveQueue([]);
+      renderQueue();
+      alert("대기열을 비웠어요!");
     });
 
 
@@ -895,6 +1037,8 @@
     
     // ✅ 초기 로드: 공개목록(songs.json)을 자동으로 불러옵니다
     loadSharedSongs();
+    // ✅ 초기 로드: 대기열 UI 준비
+    renderQueue();
 
 /* =========================
        Modal login
@@ -937,9 +1081,3 @@
   </script>
 </body>
 </html>
-
-
-
-
-
-
