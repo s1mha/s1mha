@@ -1443,38 +1443,51 @@ let queueRealtimeSub = null;
     });
 
     async function handleRecoveryFlow(){
-      // Supabase recovery verify redirects to our site with tokens in URL hash:
-      // #access_token=...&refresh_token=...&type=recovery
-      try{
-        if(!supabaseReady()) return false;
+  try{
+    if(!supabaseReady()) return false;
 
-        const hash = (location.hash || "").replace(/^#/, "");
-        const hp = new URLSearchParams(hash);
-        const type = hp.get("type") || "";
-        const at = hp.get("access_token");
-        const rt = hp.get("refresh_token");
+    // 1) hash(#)와 query(?) 둘 다 읽기
+    const hash = (location.hash || "").replace(/^#/, "");
+    const qs = (location.search || "").replace(/^\?/, "");
+    const hp = new URLSearchParams(hash);
+    const qp = new URLSearchParams(qs);
 
-        const looksLikeRecovery = (type === "recovery") || (hash.includes("type=recovery")) || (!!at && !!rt);
-        if(!looksLikeRecovery) return false;
+    const type =
+      hp.get("type") || qp.get("type") || "";
 
-        // Ensure session is set (some browsers need explicit setSession)
-        if(!!at && !!rt){
-          await sb.auth.setSession({ access_token: at, refresh_token: rt });
-        }
+    const at =
+      hp.get("access_token") || qp.get("access_token");
 
-        // Confirm we have a session user before allowing update
-        const { data } = await sb.auth.getSession();
-        if(!data?.session?.user){
-          console.warn("recovery flow: no session user yet");
-        }
+    const rt =
+      hp.get("refresh_token") || qp.get("refresh_token");
 
-        openResetModal();
-        return true;
-      }catch(e){
-        console.error("handleRecoveryFlow failed:", e);
-        return false;
-      }
+    const looksLikeRecovery =
+      type === "recovery" ||
+      hash.includes("type=recovery") ||
+      qs.includes("type=recovery") ||
+      (!!at && !!rt);
+
+    if(!looksLikeRecovery) return false;
+
+    // 2) 토큰이 있으면 세션 강제 세팅
+    if(!!at && !!rt){
+      await sb.auth.setSession({ access_token: at, refresh_token: rt });
     }
+
+    // 3) 세션 확인
+    const { data } = await sb.auth.getSession();
+    if(!data?.session?.user){
+      console.warn("recovery flow: session not ready yet");
+      // 그래도 UI는 띄워서 비번 변경 시도 가능하게
+    }
+
+    openResetModal();
+    return true;
+  }catch(e){
+    console.error("handleRecoveryFlow failed:", e);
+    return false;
+  }
+}
 
     $("resetPwBtn")?.addEventListener("click", async () => {
       if(resetWarn) resetWarn.style.display = "none";
@@ -1521,5 +1534,6 @@ let queueRealtimeSub = null;
 
 </body>
 </html>
+
 
 
