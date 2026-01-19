@@ -723,6 +723,37 @@
   </div>
 
 
+
+  <!-- Reset Password Modal (Supabase Recovery) -->
+  <div class="modal-backdrop" id="resetModalBg">
+    <div class="modal">
+      <div class="modal-head">
+        <b>🔑 비밀번호 재설정</b>
+        <button class="x" id="closeResetModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>새 비밀번호</label>
+          <input id="newPw1" type="password" placeholder="새 비밀번호 입력" />
+        </div>
+        <div class="field">
+          <label>새 비밀번호 확인</label>
+          <input id="newPw2" type="password" placeholder="한 번 더 입력" />
+        </div>
+        <div class="btnrow">
+          <button class="primary" id="resetPwBtn">변경</button>
+          <button id="resetCancelBtn">취소</button>
+        </div>
+        <div class="warn" id="resetWarn">비밀번호 변경에 실패했어요.</div>
+        <p class="tiny" style="margin-top:10px;">
+          * 메일의 복구 링크로 들어오면 이 창이 자동으로 떠야 정상이에요.<br>
+          * 변경이 완료되면 자동으로 일반 화면으로 돌아갑니다.
+        </p>
+      </div>
+    </div>
+  </div>
+
+
   <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -739,10 +770,10 @@
     // ✅ Supabase (대기열 공유용) - 여기만 채우면 바로 동작
     const SUPABASE_URL = "https://ioybuovtmxtacenlzriz.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_3EWBLPdief_w6wL1GsI2Rg_iIexJKoL";
-    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true } });
 
     // ✅ 심하님만 삭제/비우기 가능하게: Supabase Auth 유저 UID를 넣어주세요
-    const QUEUE_ADMIN_UID = "8abc505d-0fe9-4002-a6b6-f6d04f425816";
+    const QUEUE_ADMIN_UID = "f87bc3fb-a7fe-4a65-83ae-ec732fb152af";
     let queueAdminAuthed = false;
     let pendingAdminPage = null;
 
@@ -875,6 +906,7 @@
     // Supabase Auth 상태 변화 감지: 로그인/로그아웃이 UI에 즉시 반영되게
     sb.auth.onAuthStateChange(async () => {
       await refreshQueueAdmin();
+    handleRecoveryFlow();
       updateAdminVisibility();
       renderQueue();
     });
@@ -1387,11 +1419,106 @@ let queueRealtimeSub = null;
       if(e.key === "Escape") closeQueueModal();
     });
 
+    /* =========================
+       Password Recovery (Supabase)
+    ========================= */
+    const resetModalBg = $("resetModalBg");
+    const resetWarn = $("resetWarn");
+
+    function openResetModal(){
+      if(resetWarn) resetWarn.style.display = "none";
+      $("newPw1").value = "";
+      $("newPw2").value = "";
+      if(resetModalBg) resetModalBg.style.display = "flex";
+      setTimeout(() => $("newPw1")?.focus(), 0);
+    }
+    function closeResetModal(){
+      if(resetModalBg) resetModalBg.style.display = "none";
+    }
+
+    $("closeResetModal")?.addEventListener("click", closeResetModal);
+    $("resetCancelBtn")?.addEventListener("click", closeResetModal);
+    resetModalBg?.addEventListener("click", (e) => {
+      if(e.target === resetModalBg) closeResetModal();
+    });
+
+    async function handleRecoveryFlow(){
+      // Supabase recovery verify redirects to our site with tokens in URL hash:
+      // #access_token=...&refresh_token=...&type=recovery
+      try{
+        if(!supabaseReady()) return false;
+
+        const hash = (location.hash || "").replace(/^#/, "");
+        const hp = new URLSearchParams(hash);
+        const type = hp.get("type") || "";
+        const at = hp.get("access_token");
+        const rt = hp.get("refresh_token");
+
+        const looksLikeRecovery = (type === "recovery") || (hash.includes("type=recovery")) || (!!at && !!rt);
+        if(!looksLikeRecovery) return false;
+
+        // Ensure session is set (some browsers need explicit setSession)
+        if(!!at && !!rt){
+          await sb.auth.setSession({ access_token: at, refresh_token: rt });
+        }
+
+        // Confirm we have a session user before allowing update
+        const { data } = await sb.auth.getSession();
+        if(!data?.session?.user){
+          console.warn("recovery flow: no session user yet");
+        }
+
+        openResetModal();
+        return true;
+      }catch(e){
+        console.error("handleRecoveryFlow failed:", e);
+        return false;
+      }
+    }
+
+    $("resetPwBtn")?.addEventListener("click", async () => {
+      if(resetWarn) resetWarn.style.display = "none";
+      const p1 = $("newPw1").value || "";
+      const p2 = $("newPw2").value || "";
+      if(p1.length < 8){
+        alert("비밀번호는 8자 이상을 추천해요!");
+        return;
+      }
+      if(p1 !== p2){
+        alert("비밀번호가 서로 달라요!");
+        return;
+      }
+      try{
+        const { error } = await sb.auth.updateUser({ password: p1 });
+        if(error){
+          console.error("updateUser password error:", error);
+          if(resetWarn) resetWarn.style.display = "block";
+          return;
+        }
+        toast("비밀번호 변경 완료 ✅");
+        closeResetModal();
+
+        // Clean URL (remove tokens)
+        const clean = location.pathname + location.search;
+        history.replaceState(null, "", clean);
+
+        // Optional: refresh admin session flags
+        await refreshQueueAdmin?.();
+      }catch(e){
+        console.error("reset password failed:", e);
+        if(resetWarn) resetWarn.style.display = "block";
+      }
+    });
+
+    $("newPw2")?.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") $("resetPwBtn")?.click();
+      if(e.key === "Escape") closeResetModal();
+    });
+
+
   </script>
   <div class="toast" id="toast">신청완료! 💎</div>
 
 </body>
 </html>
-
-
 
