@@ -330,7 +330,6 @@
       white-space:nowrap;
     }
 
-
     .queueAdd{
       font-size:12px;
       padding: 8px 10px;
@@ -352,7 +351,6 @@
     body.obs aside{ display:none; }
     body.obs main{ padding: 18px; }
     body.obs .container{ max-width: 1100px; }
-
 
     /* Modal */
     .modal-backdrop{
@@ -527,8 +525,7 @@
           </div>
         </section>
 
-
-        <!-- 대기열 -->
+        <!-- 💎대기열 -->
         <section class="page" id="queue">
           <header>
             <h1>💎대기열</h1>
@@ -548,10 +545,10 @@
             </div>
 
             <p class="tiny" style="margin-top:12px;">
+              ✨ 시청자 신청은 즉시 공유돼요 (Supabase). OBS는 <code>?obs=queue</code> 링크를 쓰면 깔끔해요.
             </p>
           </div>
         </section>
-
 
         <!-- 미션곡 -->
         <section class="page" id="mission">
@@ -606,7 +603,7 @@
                 </label>
                 <button id="pullSharedBtn" title="현재 공개된 songs.json을 불러와서 어드민 편집 목록으로 복사">↩️ 공개목록 불러와 편집</button>
                 <button id="reloadSharedBtn" title="모두가 보는 공개목록(songs.json)을 다시 불러오기">🔄 공개목록 새로고침</button>
-<button id="logoutBtn">로그아웃</button>
+                <button id="logoutBtn">로그아웃</button>
               </div>
 
               <p class="tiny" style="margin-top:12px;">
@@ -659,6 +656,9 @@
     </div>
   </div>
 
+  <!-- Supabase client -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
   <script>
     /* =========================
        Settings
@@ -666,13 +666,20 @@
     const STORAGE_KEY = "songbook_songs_v1"; // (예전) 호환용: 어드민 임시 목록
     const DRAFT_KEY   = STORAGE_KEY;      // 현재 어드민이 편집하는 목록(브라우저 로컬)
     const SHARED_URL  = "songs.json";     // 모두가 같이 보는 공개 목록
-    const QUEUE_KEY   = "songbook_queue_v1"; // 대기열(브라우저 로컬)
     const AUTH_KEY    = "songbook_admin_authed_v1";
     const ADMIN_PASS  = "simha0506"; // ← 꼭 바꾸기!
 
+    // ✅ Supabase (대기열 공유용) - 여기만 채우면 바로 동작
+    const SUPABASE_URL = "https://ioybuovtmxtacenlzriz.supabase.co";
+    const SUPABASE_ANON_KEY = "sb_publishable_3EWBLPdief_w6wL1GsI2Rg_iIexJKoL";
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
     let sharedSongs = [];
     let sharedLoaded = false;
- // ← 꼭 바꾸기!
+
+    // 🔷 공유 대기열(서버)
+    let sharedQueue = [];
+    let queuePollTimer = null;
 
     /* =========================
        Helpers
@@ -693,71 +700,6 @@
     function saveSongs(songs){
       localStorage.setItem(DRAFT_KEY, JSON.stringify(songs));
     }
-
-
-    function loadQueue(){
-      try{
-        const raw = localStorage.getItem(QUEUE_KEY);
-        const arr = raw ? JSON.parse(raw) : [];
-        return Array.isArray(arr) ? arr : [];
-      }catch{
-        return [];
-      }
-    }
-
-    function saveQueue(queue){
-      localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
-    }
-
-    function addToQueue(song){
-      const queue = loadQueue();
-      queue.push({ artist: song.artist, title: song.title, at: Date.now() });
-      saveQueue(queue);
-      renderQueue();
-      alert("대기열에 추가됐어요! 💎");
-    }
-
-    function renderQueue(){
-      const queue = loadQueue();
-      const list = $("queueList");
-      if(!list || !$("queueCount")) return;
-
-      $("queueCount").textContent = queue.length;
-
-      // 어드민일 때만 '비우기' 버튼 보이기
-      const adminRow = $("queueAdminRow");
-      if(adminRow) adminRow.style.display = isAuthed() ? "" : "none";
-
-      list.innerHTML = queue.length ? "" : `<div class="tiny" style="padding:10px;color:var(--muted);">대기열이 비어있어요. 노래목록에서 신청을 눌러주세요!</div>`;
-
-      queue.forEach((x, idx) => {
-        const div = document.createElement("div");
-        div.className = "song";
-        const left = `
-          <div>
-            <b>${idx+1}. ${escapeHtml(x.title)}</b>
-            <span>${escapeHtml(x.artist)}</span>
-          </div>
-        `;
-        const right = isAuthed() ? `<button class="del" data-idx="${idx}">삭제</button>` : "";
-        div.innerHTML = left + right;
-        list.appendChild(div);
-      });
-
-      // 어드민 삭제
-      if(isAuthed()){
-        list.querySelectorAll(".del").forEach(btn => {
-          btn.addEventListener("click", () => {
-            const i = Number(btn.dataset.idx);
-            const q = loadQueue();
-            q.splice(i, 1);
-            saveQueue(q);
-            renderQueue();
-          });
-        });
-      }
-    }
-
 
     async function loadSharedSongs(){
       // 모두가 같이 보는 "공개 목록" (songs.json)
@@ -796,6 +738,113 @@
 
     function norm(s){
       return (s || "").toString().trim();
+    }
+
+    // =========================
+    // ✅ Queue (Supabase shared)
+    // =========================
+    async function loadQueueFromDB(){
+      // 테이블: queue (artist, title, created_at)
+      if(!SUPABASE_URL || SUPABASE_URL.startsWith("__")){
+        return; // 아직 키를 안 넣은 경우
+      }
+      const { data, error } = await sb
+        .from("queue")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if(error){
+        console.error("loadQueueFromDB error:", error);
+        return;
+      }
+      sharedQueue = data || [];
+      renderQueue();
+    }
+
+    async function addToQueue(song){
+      if(!SUPABASE_URL || SUPABASE_URL.startsWith("__")){
+        alert("아직 Supabase 설정이 안 됐어요! (SUPABASE_URL / ANON_KEY 채워주세요)");
+        return;
+      }
+      const { error } = await sb.from("queue").insert({
+        artist: song.artist,
+        title: song.title
+      });
+
+      if(error){
+        console.error("addToQueue error:", error);
+        alert("대기열 추가 실패 😭 잠시 후 다시 시도해줘!");
+        return;
+      }
+
+      alert("대기열에 추가됐어요! 💎");
+      await loadQueueFromDB();
+    }
+
+    async function removeQueueItem(id){
+      const { error } = await sb.from("queue").delete().eq("id", id);
+      if(error){
+        console.error("removeQueueItem error:", error);
+        alert("삭제 실패 😭");
+        return;
+      }
+      await loadQueueFromDB();
+    }
+
+    async function clearQueue(){
+      const ok = confirm("대기열을 전부 비울까요?");
+      if(!ok) return;
+      const { error } = await sb.from("queue").delete().neq("id", 0);
+      if(error){
+        console.error("clearQueue error:", error);
+        alert("비우기 실패 😭");
+        return;
+      }
+      await loadQueueFromDB();
+      alert("대기열을 비웠어요!");
+    }
+
+    function startQueuePolling(ms=2000){
+      if(queuePollTimer) clearInterval(queuePollTimer);
+      loadQueueFromDB();
+      queuePollTimer = setInterval(loadQueueFromDB, ms);
+    }
+
+    function renderQueue(){
+      const list = $("queueList");
+      if(!list || !$("queueCount")) return;
+
+      $("queueCount").textContent = sharedQueue.length;
+
+      const adminRow = $("queueAdminRow");
+      if(adminRow) adminRow.style.display = isAuthed() ? "" : "none";
+
+      list.innerHTML = sharedQueue.length ? "" :
+        `<div class="tiny" style="padding:10px;color:var(--muted);">대기열이 비어있어요. 노래목록에서 신청을 눌러주세요!</div>`;
+
+      sharedQueue.forEach((x, idx) => {
+        const div = document.createElement("div");
+        div.className = "song";
+
+        const right = isAuthed()
+          ? `<button class="del" data-id="${x.id}">삭제</button>`
+          : "";
+
+        div.innerHTML = `
+          <div>
+            <b>${idx+1}. ${escapeHtml(x.title)}</b>
+            <span>${escapeHtml(x.artist)}</span>
+          </div>
+          ${right}
+        `;
+        list.appendChild(div);
+      });
+
+      if(isAuthed()){
+        list.querySelectorAll(".del").forEach(btn => {
+          btn.addEventListener("click", () => removeQueueItem(btn.dataset.id));
+        });
+      }
     }
 
     function renderSongs(){
@@ -868,7 +917,7 @@
         .replaceAll("&","&amp;")
         .replaceAll("<","&lt;")
         .replaceAll(">","&gt;")
-        .replaceAll('"',"quot;")
+        .replaceAll('"',"&quot;")
         .replaceAll("'","&#039;");
     }
 
@@ -897,12 +946,10 @@
       links.forEach(a => a.classList.toggle("active", a.dataset.page === pageId));
       history.replaceState(null, "", "#" + pageId);
 
-      // page-specific renders
       if(pageId === "songs") renderSongs();
       if(pageId === "queue") renderQueue();
       if(pageId === "admin"){
         if(!isAuthed()){
-          // not allowed -> bounce
           show("guide");
           openModal();
           return;
@@ -923,18 +970,15 @@
       });
     });
 
-    // Initial
     updateAdminVisibility();
     const initial = (location.hash || "#guide").replace("#","");
     show(["guide","songs","queue","mission","admin"].includes(initial) ? initial : "guide");
 
-    // OBS 전용 화면: 주소에 ?obs=queue 를 붙이면 '대기열'만 크게 띄웁니다
     const obs = new URLSearchParams(location.search).get("obs");
     if(obs === "queue"){
       document.body.classList.add("obs");
       show("queue");
     }
-
 
     /* =========================
        Search
@@ -956,7 +1000,6 @@
       const songs = loadSongs();
       songs.push({ artist, title });
 
-      // Optional: 깔끔하게 정렬 (가수 > 제목)
       songs.sort((a,b) => {
         const aa = (a.artist||"").localeCompare(b.artist||"", "ko");
         if(aa !== 0) return aa;
@@ -978,23 +1021,13 @@
       show("guide");
     });
 
+    $("clearQueueBtn")?.addEventListener("click", clearQueue);
 
-    $("clearQueueBtn")?.addEventListener("click", () => {
-      const ok = confirm("대기열을 전부 비울까요?");
-      if(!ok) return;
-      saveQueue([]);
-      renderQueue();
-      alert("대기열을 비웠어요!");
-    });
-
-
-    // 내보내기: 지금 어드민 임시 목록을 songs.json으로 저장
     $("exportBtn")?.addEventListener("click", () => {
       const draft = loadSongs();
       downloadJson(draft, "songs.json");
     });
 
-    // 가져오기: songs.json 파일을 읽어 어드민 임시 목록으로 저장
     $("importFile")?.addEventListener("change", async (e) => {
       const file = e.target.files?.[0];
       if(!file) return;
@@ -1013,7 +1046,6 @@
       }
     });
 
-    // 공개목록을 임시 목록으로 복사(편집용)
     $("pullSharedBtn")?.addEventListener("click", async () => {
       await loadSharedSongs();
       if(!sharedLoaded){
@@ -1027,19 +1059,16 @@
       renderSongs();
     });
 
-    // 공개목록 새로고침
     $("reloadSharedBtn")?.addEventListener("click", () => {
       loadSharedSongs();
       alert("공개목록 새로고침 요청! (방금 올라간 songs.json이면 곧 반영돼요)");
     });
 
-    
-    // ✅ 초기 로드: 공개목록(songs.json)을 자동으로 불러옵니다
+    // ✅ 초기 로드
     loadSharedSongs();
-    // ✅ 초기 로드: 대기열 UI 준비
-    renderQueue();
+    startQueuePolling(2000);
 
-/* =========================
+    /* =========================
        Modal login
     ========================= */
     const modalBg = $("modalBg");
@@ -1080,4 +1109,3 @@
   </script>
 </body>
 </html>
-
