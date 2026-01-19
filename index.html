@@ -468,7 +468,7 @@
       </nav>
 
       <div class="sidebar-footer">
-        <span>© 채널명</span>
+        <span>©S1MHA</span>
         <button class="gear" id="openAdmin" title="어드민">⚙︎</button>
       </div>
     </aside>
@@ -745,6 +745,7 @@
     // ✅ 심하님만 삭제/비우기 가능하게: Supabase Auth 유저 UID를 넣어주세요
     const QUEUE_ADMIN_UID = "f87bc3fb-a7fe-4a65-83ae-ec732fb152af";
     let queueAdminAuthed = false;
+    let pendingAdminPage = null;
 
     let sharedSongs = [];
     let sharedLoaded = false;
@@ -791,8 +792,8 @@
     }
 
     function getVisibleSongs(){
-      // 일반 방문자: 공개 목록 / 어드민: 임시 목록(편집 미리보기)
-      if(isAuthed()) return loadSongs();
+      // 일반 방문자: 공개 목록 / (심하) 관리자: 임시 목록(편집 미리보기)
+      if(isQueueAdmin()) return loadSongs();
       return sharedSongs;
     }
 
@@ -871,6 +872,14 @@
         return false;
       }
     }
+
+    // Supabase Auth 상태 변화 감지: 로그인/로그아웃이 UI에 즉시 반영되게
+    sb.auth.onAuthStateChange(async () => {
+      await refreshQueueAdmin();
+      updateAdminVisibility();
+      renderQueue();
+    });
+
 let queueRealtimeSub = null;
 
     async function startQueueRealtime(){
@@ -1005,7 +1014,7 @@ let queueRealtimeSub = null;
         const div = document.createElement("div");
         div.className = "song";
 
-        const right = isAuthed()
+        const right = isQueueAdmin()
           ? `<button class="del" data-id="${x.id}">삭제</button>`
           : "";
 
@@ -1106,11 +1115,13 @@ let queueRealtimeSub = null;
     }
 
     function isAuthed(){
-      return localStorage.getItem(AUTH_KEY) === "1";
+      // (호환) 예전 로컬 어드민 대신, Supabase 관리자 여부를 사용합니다
+      return isQueueAdmin();
     }
 
     function updateAdminVisibility(){
-      $("adminNav").style.display = isAuthed() ? "" : "none";
+      $("adminNav").style.display = isQueueAdmin() ? "" : "none";
+      updateQueueAdminUI();
       renderQueue();
     }
 
@@ -1128,9 +1139,10 @@ let queueRealtimeSub = null;
       if(pageId === "songs") renderSongs();
       if(pageId === "queue") renderQueue();
       if(pageId === "admin"){
-        if(!isAuthed()){
+        if(!isQueueAdmin()){
+          pendingAdminPage = "admin";
           show("guide");
-          openModal();
+          openQueueModal();
           return;
         }
         renderAdminList();
@@ -1141,8 +1153,9 @@ let queueRealtimeSub = null;
       a.addEventListener("click", (e) => {
         e.preventDefault();
         const target = a.dataset.page;
-        if(target === "admin" && !isAuthed()){
-          openModal();
+        if(target === "admin" && !isQueueAdmin()){
+          pendingAdminPage = "admin";
+          openQueueModal();
           return;
         }
         show(target);
@@ -1195,8 +1208,12 @@ let queueRealtimeSub = null;
       renderSongs();
     });
 
-    $("logoutBtn").addEventListener("click", () => {
-      setAuthed(false);
+    $("logoutBtn").addEventListener("click", async () => {
+      try{ await sb.auth.signOut(); }catch(e){ console.error(e); }
+      queueAdminAuthed = false;
+      pendingAdminPage = null;
+      updateAdminVisibility();
+      toast("로그아웃");
       show("guide");
     });
 
@@ -1270,7 +1287,7 @@ let queueRealtimeSub = null;
       modalBg.style.display = "none";
     }
 
-    $("openAdmin").addEventListener("click", openModal);
+    $("openAdmin").addEventListener("click", () => { pendingAdminPage = "admin"; openQueueModal(); });
     $("closeModal").addEventListener("click", closeModal);
     $("cancelBtn").addEventListener("click", closeModal);
     modalBg.addEventListener("click", (e) => {
@@ -1310,7 +1327,7 @@ let queueRealtimeSub = null;
       if(queueModalBg) queueModalBg.style.display = "none";
     }
 
-    $("queueAdminBtn")?.addEventListener("click", openQueueModal);
+    $("queueAdminBtn")?.addEventListener("click", () => { pendingAdminPage = "queue"; openQueueModal(); });
     $("closeQueueModal")?.addEventListener("click", closeQueueModal);
     $("queueCancelBtn")?.addEventListener("click", closeQueueModal);
     queueModalBg?.addEventListener("click", (e) => {
@@ -1333,9 +1350,21 @@ let queueRealtimeSub = null;
           return;
         }
         await refreshQueueAdmin();
+        if(!isQueueAdmin()){
+          // 로그인은 됐지만, 지정된 관리자 UID가 아니면 권한 없음
+          toast("관리자 권한 없음 🔒");
+          if(queueWarn) queueWarn.style.display = "block";
+          try{ await sb.auth.signOut(); }catch(e){ console.error(e); }
+          queueAdminAuthed = false;
+          updateAdminVisibility();
+          return;
+        }
         toast("관리자 로그인");
         closeQueueModal();
-        renderQueue();
+        const go = pendingAdminPage;
+        pendingAdminPage = null;
+        updateAdminVisibility();
+        if(go) show(go); else renderQueue();
       }catch(e){
         console.error("queue admin login failed:", e);
         if(queueWarn) queueWarn.style.display = "block";
@@ -1364,5 +1393,4 @@ let queueRealtimeSub = null;
 
 </body>
 </html>
-
 
