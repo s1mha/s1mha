@@ -422,6 +422,30 @@
     }
     .btnlike:hover{ transform: translateY(-1px); }
 
+  
+    /* Toast */
+    .toast{
+      position:fixed;
+      left:50%;
+      bottom:22px;
+      transform: translateX(-50%);
+      padding: 10px 14px;
+      border-radius: 999px;
+      border:1px solid rgba(15,23,42,.10);
+      background: rgba(255,255,255,.92);
+      box-shadow: 0 18px 40px rgba(15,23,42,.14);
+      font-weight:900;
+      letter-spacing:-.2px;
+      display:none;
+      z-index: 80;
+      user-select:none;
+    }
+    .toast.show{ display:block; animation: toastPop .18s ease-out; }
+    @keyframes toastPop{
+      from{ opacity:0; transform: translateX(-50%) translateY(8px); }
+      to{ opacity:1; transform: translateX(-50%) translateY(0); }
+    }
+
   </style>
 </head>
 <body>
@@ -548,6 +572,7 @@
               <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
                 <span class="queueStatus" id="queueStatus"><span class="dot" id="queueDot"></span><span id="queueStatusText">대기 중…</span></span>
                 <button id="queueRefreshBtn" title="대기열 새로고침">🔄 새로고침</button>
+                <button id="queueAdminBtn" title="대기열 관리자 로그인">🔐 관리자</button>
                 <div class="meta"><span id="queueCount">0</span>곡</div>
               </div>
             </div>
@@ -559,6 +584,7 @@
             </div>
 
             <p class="tiny" style="margin-top:12px;">
+              ✨ 시청자 신청은 즉시 공유돼요 (Supabase). OBS는 <code>?obs=queue</code> 링크를 쓰면 깔끔해요.
             </p>
           </div>
         </section>
@@ -669,6 +695,38 @@
     </div>
   </div>
 
+
+  <!-- Queue Admin Modal (Supabase Auth) -->
+  <div class="modal-backdrop" id="queueModalBg">
+    <div class="modal">
+      <div class="modal-head">
+        <b>🔐 대기열 관리자 로그인</b>
+        <button class="x" id="closeQueueModal">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label>관리자 이메일 (Supabase Auth)</label>
+          <input id="queueEmail" type="text" placeholder="예: your@email.com" />
+        </div>
+        <div class="field">
+          <label>비밀번호</label>
+          <input id="queuePw" type="password" placeholder="비밀번호 입력" />
+        </div>
+        <div class="btnrow">
+          <button class="primary" id="queueLoginBtn">로그인</button>
+          <button id="queueCancelBtn">취소</button>
+          <button class="danger" id="queueLogoutBtn" style="display:none;">로그아웃</button>
+        </div>
+        <div class="warn" id="queueWarn">로그인 실패. 이메일/비번을 확인해주세요.</div>
+        <p class="tiny" style="margin-top:10px;">
+          * 이 로그인은 <b>대기열 삭제/비우기 권한</b>을 심하님만 갖도록 하기 위한 장치예요.<br>
+          * 일반 시청자는 로그인 없이 <b>신청(추가)</b>만 가능해요.
+        </p>
+      </div>
+    </div>
+  </div>
+
+
   <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
@@ -686,6 +744,10 @@
     const SUPABASE_URL = "https://ioybuovtmxtacenlzriz.supabase.co";
     const SUPABASE_ANON_KEY = "sb_publishable_3EWBLPdief_w6wL1GsI2Rg_iIexJKoL";
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // ✅ 심하님만 삭제/비우기 가능하게: Supabase Auth 유저 UID를 넣어주세요
+    const QUEUE_ADMIN_UID = "8ebbf27e-2d78-4e28-a82d-63132a545788";
+    let queueAdminAuthed = false;
 
     let sharedSongs = [];
     let sharedLoaded = false;
@@ -772,7 +834,47 @@
              SUPABASE_ANON_KEY && !SUPABASE_ANON_KEY.startsWith("__");
     }
 
-    let queueRealtimeSub = null;
+    
+
+    // Toast
+    let toastTimer = null;
+    function toast(msg){
+      const el = $("toast");
+      if(!el) return;
+      el.textContent = msg || "";
+      el.classList.add("show");
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => el.classList.remove("show"), 1300);
+    }
+
+    function isQueueAdmin(){
+      return queueAdminAuthed === true;
+    }
+
+    function updateQueueAdminUI(){
+      // 대기열 탭: 어드민 행/로그아웃 버튼 표시
+      const adminRow = $("queueAdminRow");
+      if(adminRow) adminRow.style.display = isQueueAdmin() ? "" : "none";
+      const logoutBtn = $("queueLogoutBtn");
+      if(logoutBtn) logoutBtn.style.display = isQueueAdmin() ? "" : "none";
+    }
+
+    async function refreshQueueAdmin(){
+      try{
+        if(!supabaseReady()) return false;
+        const { data } = await sb.auth.getSession();
+        const uid = data?.session?.user?.id || "";
+        queueAdminAuthed = !!uid && !!QUEUE_ADMIN_UID && !QUEUE_ADMIN_UID.startsWith("__") && uid === QUEUE_ADMIN_UID;
+        updateQueueAdminUI();
+        return queueAdminAuthed;
+      }catch(e){
+        console.error("refreshQueueAdmin failed:", e);
+        queueAdminAuthed = false;
+        updateQueueAdminUI();
+        return false;
+      }
+    }
+let queueRealtimeSub = null;
 
     async function startQueueRealtime(){
       // Realtime을 켜두면 즉시 반영(OBS 최고). 안 켜져 있으면 폴링으로 자동 fallback.
@@ -845,27 +947,38 @@
         return;
       }
 
+      toast("신청완료! 💎");
       setQueueStatus("ok", "추가됨 · " + new Date().toLocaleTimeString());
       await loadQueueFromDB();
     }
 
     async function removeQueueItem(id){
+      if(!isQueueAdmin()){
+        toast("권한 없음 🔒");
+        return;
+      }
       const { error } = await sb.from("queue").delete().eq("id", id);
       if(error){
         console.error("removeQueueItem error:", error);
-        alert("삭제 실패 😭");
+        const msg = (error && (error.message || error.details || error.hint)) ? (error.message || error.details || error.hint) : "원인 불명";
+        alert("삭제 실패 😭\n\n" + msg + "\n\n(대부분 RLS delete 정책/관리자 UID 설정 문제예요)");
         return;
       }
       await loadQueueFromDB();
     }
 
     async function clearQueue(){
+      if(!isQueueAdmin()){
+        toast("권한 없음 🔒");
+        return;
+      }
       const ok = confirm("대기열을 전부 비울까요?");
       if(!ok) return;
       const { error } = await sb.from("queue").delete().neq("id", 0);
       if(error){
         console.error("clearQueue error:", error);
-        alert("비우기 실패 😭");
+        const msg = (error && (error.message || error.details || error.hint)) ? (error.message || error.details || error.hint) : "원인 불명";
+        alert("비우기 실패 😭\n\n" + msg + "\n\n(대부분 RLS delete 정책/관리자 UID 설정 문제예요)");
         return;
       }
       await loadQueueFromDB();
@@ -886,7 +999,7 @@
       $("queueCount").textContent = sharedQueue.length;
 
       const adminRow = $("queueAdminRow");
-      if(adminRow) adminRow.style.display = isAuthed() ? "" : "none";
+      if(adminRow) adminRow.style.display = isQueueAdmin() ? "" : "none";
 
       list.innerHTML = sharedQueue.length ? "" :
         `<div class="tiny" style="padding:10px;color:var(--muted);">대기열이 비어있어요. 노래목록에서 신청을 눌러주세요!</div>`;
@@ -909,7 +1022,7 @@
         list.appendChild(div);
       });
 
-      if(isAuthed()){
+      if(isQueueAdmin()){
         list.querySelectorAll(".del").forEach(btn => {
           btn.addEventListener("click", () => removeQueueItem(btn.dataset.id));
         });
@@ -1182,7 +1295,75 @@
       if(e.key === "Enter") $("loginBtn").click();
       if(e.key === "Escape") closeModal();
     });
+
+    /* =========================
+       Queue Admin Modal (Supabase Auth)
+    ========================= */
+    const queueModalBg = $("queueModalBg");
+    const queueWarn = $("queueWarn");
+
+    function openQueueModal(){
+      if(queueWarn) queueWarn.style.display = "none";
+      if($("queueEmail")) $("queueEmail").value = "";
+      if($("queuePw")) $("queuePw").value = "";
+      if(queueModalBg) queueModalBg.style.display = "flex";
+      setTimeout(() => $("queueEmail")?.focus(), 0);
+    }
+    function closeQueueModal(){
+      if(queueModalBg) queueModalBg.style.display = "none";
+    }
+
+    $("queueAdminBtn")?.addEventListener("click", openQueueModal);
+    $("closeQueueModal")?.addEventListener("click", closeQueueModal);
+    $("queueCancelBtn")?.addEventListener("click", closeQueueModal);
+    queueModalBg?.addEventListener("click", (e) => {
+      if(e.target === queueModalBg) closeQueueModal();
+    });
+
+    $("queueLoginBtn")?.addEventListener("click", async () => {
+      if(queueWarn) queueWarn.style.display = "none";
+      const email = ($("queueEmail")?.value || "").trim();
+      const password = $("queuePw")?.value || "";
+      if(!email || !password){
+        alert("이메일과 비밀번호를 입력해주세요!");
+        return;
+      }
+      try{
+        const { error } = await sb.auth.signInWithPassword({ email, password });
+        if(error){
+          console.error("queue admin login error:", error);
+          if(queueWarn) queueWarn.style.display = "block";
+          return;
+        }
+        await refreshQueueAdmin();
+        toast("관리자 로그인");
+        closeQueueModal();
+        renderQueue();
+      }catch(e){
+        console.error("queue admin login failed:", e);
+        if(queueWarn) queueWarn.style.display = "block";
+      }
+    });
+
+    $("queueLogoutBtn")?.addEventListener("click", async () => {
+      try{
+        await sb.auth.signOut();
+      }catch(e){
+        console.error("queue admin logout failed:", e);
+      }
+      queueAdminAuthed = false;
+      updateQueueAdminUI();
+      toast("로그아웃");
+      renderQueue();
+    });
+
+    $("queuePw")?.addEventListener("keydown", (e) => {
+      if(e.key === "Enter") $("queueLoginBtn")?.click();
+      if(e.key === "Escape") closeQueueModal();
+    });
+
   </script>
+  <div class="toast" id="toast">신청완료! 💎</div>
+
 </body>
 </html>
-
