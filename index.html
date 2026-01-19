@@ -700,17 +700,17 @@
   <div class="modal-backdrop" id="queueModalBg">
     <div class="modal">
       <div class="modal-head">
-        <b>🔐 대기열 관리자 로그인</b>
+        <b>🔐 관리자 로그인</b>
         <button class="x" id="closeQueueModal">✕</button>
       </div>
       <div class="modal-body">
         <div class="field">
-          <label>관리자 이메일 (Supabase Auth)</label>
-          <input id="queueEmail" type="text" placeholder="예: your@email.com" />
+          <label>관리자만 로그인 가능합니다</label>
+          <input id="queueEmail" type="text" placeholder="id" />
         </div>
         <div class="field">
-          <label>비밀번호</label>
-          <input id="queuePw" type="password" placeholder="비밀번호 입력" />
+          <label>암호</label>
+          <input id="queuePw" type="password" placeholder="pw" />
         </div>
         <div class="btnrow">
           <button class="primary" id="queueLoginBtn">로그인</button>
@@ -719,8 +719,6 @@
         </div>
         <div class="warn" id="queueWarn">로그인 실패. 이메일/비번을 확인해주세요.</div>
         <p class="tiny" style="margin-top:10px;">
-          * 이 로그인은 <b>대기열 삭제/비우기 권한</b>을 심하님만 갖도록 하기 위한 장치예요.<br>
-          * 일반 시청자는 로그인 없이 <b>신청(추가)</b>만 가능해요.
         </p>
       </div>
     </div>
@@ -746,7 +744,7 @@
     const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // ✅ 심하님만 삭제/비우기 가능하게: Supabase Auth 유저 UID를 넣어주세요
-    const QUEUE_ADMIN_UID = "8ebbf27e-2d78-4e28-a82d-63132a545788";
+    const QUEUE_ADMIN_UID = "f87bc3fb-a7fe-4a65-83ae-ec732fb152af";
     let queueAdminAuthed = false;
 
     let sharedSongs = [];
@@ -1367,3 +1365,4 @@ let queueRealtimeSub = null;
 
 </body>
 </html>
+
